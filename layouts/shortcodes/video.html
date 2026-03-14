@@ -1,0 +1,15 @@
+{{ $src := .Get 0 }}
+{{ $width := .Get 1 | default "100%" }}
+<div class="video-container">
+    {{ with $.Page.Resources.GetMatch $src }}
+    <video controls style="max-width: {{ $width }}; height: auto;">
+        <source src="{{ .RelPermalink }}" type="video/mp4">
+        Your browser does not support the video tag.
+    </video>
+    {{ else }}
+    <video controls style="max-width: {{ $width }}; height: auto;">
+        <source src="{{ $src }}" type="video/mp4">
+        Your browser does not support the video tag.
+    </video>
+    {{ end }}
+</div>

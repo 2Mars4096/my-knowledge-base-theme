@@ -1,0 +1,3 @@
+[{{ range $i, $p := where .Site.RegularPages "Draft" false }}{{ if $i }},{{ end }}
+{"title":{{ $p.Title | jsonify }},"url":{{ $p.RelPermalink | jsonify }},"tags":{{ with $p.Params.tags }}{{ . | jsonify }}{{ else }}[]{{ end }},"section":{{ $p.Section | jsonify }},"date":{{ $p.Lastmod.Format "2006-01-02" | jsonify }}}{{ end }}
+]

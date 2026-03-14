@@ -1,0 +1,42 @@
+{{ define "main" }}
+{{ if .IsNode }}
+    {{ if eq .Kind "term" }}
+    <!-- Single tag page: show all pages with this tag -->
+    <div class="list-header">
+        <h1>Tag: {{ .Title }} <span class="list-header__count">({{ len .Pages }})</span></h1>
+    </div>
+    <ul class="page-list">
+        {{ range .Pages.ByLastmod.Reverse }}
+        {{ $sec := .Section }}
+        <li class="page-item section-border--{{ $sec }}">
+            <div class="page-item__body">
+                <a href="{{ .RelPermalink }}" class="page-item__title">{{ .Title }}</a>
+                {{ with .Params.subtitle }}<div class="page-item__subtitle">{{ . }}</div>{{ end }}
+                <div class="page-item__meta">
+                    {{ with .Params.tags }}
+                    <div class="tag-pills">
+                        {{ range . }}<a href="/tags/{{ . | urlize }}/" class="tag-pill">{{ . }}</a>{{ end }}
+                    </div>
+                    {{ end }}
+                </div>
+            </div>
+            <span class="page-item__date">{{ .Lastmod.Format "Jan 2, 2006" }}</span>
+        </li>
+        {{ end }}
+    </ul>
+    {{ else }}
+    <!-- Tags list page: show all tags as a grid -->
+    <div class="list-header">
+        <h1>All Tags</h1>
+    </div>
+    <div class="tag-grid">
+        {{ range .Site.Taxonomies.tags.Alphabetical }}
+        <a href="{{ .Page.RelPermalink }}" class="tag-card">
+            {{ .Page.Title }}
+            <span class="tag-card__count">{{ .Count }}</span>
+        </a>
+        {{ end }}
+    </div>
+    {{ end }}
+{{ end }}
+{{ end }}

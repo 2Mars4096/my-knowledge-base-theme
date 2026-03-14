@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/styles.css">
+    <link rel="stylesheet" href="/css/syntax.css">
+    <title>{{ .Title }} | {{ .Site.Title }}</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    {{ $hasMath := false }}
+    {{ if .IsPage }}
+        {{ $raw := .RawContent }}
+        {{ if or (findRE `\$\$` $raw) (findRE `\$[^\\$]` $raw) (findRE `\\\(` $raw) (findRE `\\\[` $raw) (findRE `\\begin\{` $raw) }}
+            {{ $hasMath = true }}
+        {{ end }}
+    {{ else if .IsSection }}
+        {{ range first 5 .Pages }}
+            {{ $raw := .RawContent }}
+            {{ if or (findRE `\$\$` $raw) (findRE `\$[^\\$]` $raw) (findRE `\\\(` $raw) (findRE `\\\[` $raw) (findRE `\\begin\{` $raw) }}
+                {{ $hasMath = true }}
+            {{ end }}
+        {{ end }}
+    {{ end }}
+    {{ if $hasMath }}
+    <script>
+        window.MathJax = {
+            tex: {
+                inlineMath: [['\\(', '\\)']],
+                displayMath: [['\\[', '\\]']],
+                processEscapes: true,
+                tags: 'ams',
+                packages: {'[+]': ['ams', 'noerrors', 'physics']},
+                macros: {
+                    '*': '\\ast',
+                    RR: '{\\mathbb{R}}',
+                    NN: '{\\mathbb{N}}',
+                    ZZ: '{\\mathbb{Z}}',
+                    CC: '{\\mathbb{C}}',
+                    QQ: '{\\mathbb{Q}}',
+                    FF: '{\\mathcal{F}}',
+                    E: '{\\mathbb{E}}',
+                    Var: '{\\operatorname{Var}}',
+                    Cov: '{\\operatorname{Cov}}',
+                    Prob: '{\\mathbb{P}}',
+                    argmin: '{\\operatorname{arg\\,min}}',
+                    argmax: '{\\operatorname{arg\\,max}}',
+                    minimize: '{\\operatorname{minimize}}',
+                    maximize: '{\\operatorname{maximize}}',
+                    st: '{\\text{s.t.}}',
+                    ind: '{\\mathbb{1}}',
+                    norm: ['{\\left\\| #1 \\right\\|}', 1],
+                    abs: ['{\\left| #1 \\right|}', 1],
+                    inner: ['{\\langle #1, #2 \\rangle}', 2],
+                },
+            },
+            options: {
+                ignoreHtmlClass: 'markmap',
+                processEnvironments: true,
+            },
+            chtml: {
+                scale: 1.05,
+                mtextInheritFont: false,
+                matchFontHeight: true,
+                displayAlign: 'left',
+                displayIndent: '2em'
+            },
+            svg: {
+                scale: 1.05,
+                matchFontHeight: true,
+                displayAlign: 'left',
+                displayIndent: '2em'
+            }
+        };
+    </script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+    {{ end }}
+    <script type="module">
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+        mermaid.initialize({ startOnLoad: true });
+    </script>
+</head>
+
+<body>
+    {{ $currentSection := "" }}
+    {{ with .FirstSection }}{{ $currentSection = .Section }}{{ end }}
+    {{ $navSections := .Site.Params.navSections | default (slice "papers" "notes" "log" "to-do" "blogs") }}
+
+    <header class="site-nav">
+        <div class="site-nav__left">
+            <a href="/" class="site-nav__title">{{ .Site.Title }}</a>
+            <ul class="site-nav__links">
+                {{ range $navSections }}
+                {{ $displayName := . | title }}
+                {{ with site.GetPage . }}{{ $displayName = .Title }}{{ end }}
+                <li><a href="/{{ . }}/" class="nav-link {{ if eq $currentSection . }}nav-link--active{{ end }}">{{ $displayName }}</a></li>
+                {{ end }}
+            </ul>
+        </div>
+        <div class="site-nav__right">
+            <button class="search-trigger" onclick="openSearch()" title="Search (⌘K)">
+                Search <kbd>⌘K</kbd>
+            </button>
+        </div>
+    </header>
+
+    <div class="search-overlay" id="searchOverlay">
+        <div class="search-box">
+            <input type="text" class="search-input" id="searchInput" placeholder="Search pages..." autocomplete="off">
+            <div class="search-results" id="searchResults"></div>
+        </div>
+    </div>
+
+    <main>
+        {{ block "main" . }}{{ end }}
+    </main>
+
+    <footer class="site-footer">
+        &copy; {{ now.Year }} {{ .Site.Title }}. Powered by Hugo.
+    </footer>
+
+    <script>
+    // --- Search ---
+    let searchIndex = null;
+    const sectionColors = {papers:'papers',notes:'notes',log:'log','to-do':'to-do',blogs:'blogs',research:'research'};
+
+    function openSearch() {
+        const overlay = document.getElementById('searchOverlay');
+        overlay.classList.add('active');
+        const input = document.getElementById('searchInput');
+        input.value = '';
+        input.focus();
+        if (!searchIndex) {
+            fetch('/index.json')
+                .then(r => r.json())
+                .then(data => { searchIndex = data; })
+                .catch(() => { searchIndex = []; });
+        }
+    }
+
+    function closeSearch() {
+        document.getElementById('searchOverlay').classList.remove('active');
+    }
+
+    document.addEventListener('keydown', function(e) {
+        if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+            e.preventDefault();
+            const overlay = document.getElementById('searchOverlay');
+            if (overlay.classList.contains('active')) closeSearch();
+            else openSearch();
+        }
+        if (e.key === 'Escape') closeSearch();
+    });
+
+    document.getElementById('searchOverlay').addEventListener('click', function(e) {
+        if (e.target === this) closeSearch();
+    });
+
+    document.getElementById('searchInput').addEventListener('input', function(e) {
+        const query = e.target.value.toLowerCase().trim();
+        const results = document.getElementById('searchResults');
+        if (!query || !searchIndex) { results.innerHTML = ''; return; }
+        const matches = searchIndex.filter(p => {
+            const inTitle = p.title && p.title.toLowerCase().includes(query);
+            const inTags = p.tags && p.tags.some(t => t.toLowerCase().includes(query));
+            return inTitle || inTags;
+        }).slice(0, 15);
+        if (matches.length === 0) {
+            results.innerHTML = '<div class="search-no-results">No results</div>';
+            return;
+        }
+        results.innerHTML = matches.map(m => {
+            const sec = m.section || '';
+            const dotClass = sectionColors[sec] ? 'section-dot--' + sectionColors[sec] : '';
+            const tags = (m.tags || []).map(t => '<span class="tag-pill">' + t + '</span>').join(' ');
+            return '<a href="' + m.url + '" class="search-result section-border--' + sec + '" onclick="closeSearch()">' +
+                '<span class="search-result__title">' + m.title + '</span>' +
+                tags +
+                '<span class="search-result__meta">' + (m.date || '') + '</span></a>';
+        }).join('');
+    });
+
+    // --- Auto external links in new tab ---
+    document.addEventListener('DOMContentLoaded', function() {
+        document.querySelectorAll('a[href^="http"]').forEach(function(link) {
+            if (link.hostname !== window.location.hostname) {
+                link.setAttribute('target', '_blank');
+                link.setAttribute('rel', 'noopener noreferrer');
+            }
+        });
+    });
+    </script>
+</body>
+
+</html>

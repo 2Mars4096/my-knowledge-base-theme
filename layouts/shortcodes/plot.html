@@ -1,0 +1,49 @@
+<div id="{{ .Get "id" }}" style="width:600px;height:400px;"></div>
+<script>
+    (function() {
+        const xValues = [];
+        const functions = [];
+
+        const params = [
+            { func: '{{ .Get "function1" }}', name: '{{ .Get "functionName1" }}', color: '{{ .Get "color1" }}' },
+            { func: '{{ .Get "function2" }}', name: '{{ .Get "functionName2" }}', color: '{{ .Get "color2" }}' },
+            { func: '{{ .Get "function3" }}', name: '{{ .Get "functionName3" }}', color: '{{ .Get "color3" }}' },
+            { func: '{{ .Get "function4" }}', name: '{{ .Get "functionName4" }}', color: '{{ .Get "color4" }}' },
+            { func: '{{ .Get "function5" }}', name: '{{ .Get "functionName5" }}', color: '{{ .Get "color5" }}' }
+        ];
+
+        params.forEach(f => {
+            if (f.func) {
+                functions.push({
+                    func: new Function('x', 'return ' + f.func),
+                    name: f.name,
+                    color: f.color
+                });
+            }
+        });
+
+        for (let x = -10; x <= 10; x += 0.1) {
+            xValues.push(x);
+        }
+
+        const traces = functions.map(f => {
+            const yValues = xValues.map(x => f.func(x));
+            return {
+                x: xValues,
+                y: yValues,
+                mode: 'lines',
+                name: f.name,
+                line: { color: f.color }
+            };
+        });
+
+        const layout = {
+            title: '{{ .Get "title" }}',
+            xaxis: { title: 'x' },
+            yaxis: { title: 'f(x)' },
+            showlegend: traces.length > 0
+        };
+        
+        Plotly.newPlot('{{ .Get "id" }}', traces, layout);
+    })();
+</script>

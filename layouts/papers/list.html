@@ -1,0 +1,272 @@
+{{ define "main" }}
+{{ $pages := sort .RegularPagesRecursive "Lastmod" "desc" }}
+
+<div class="list-header">
+    <h1>Papers <span class="list-header__count">({{ len $pages }})</span></h1>
+    <div class="list-controls">
+        <button id="sortBtn" onclick="cycleSort()">Date Added</button>
+        <button id="viewBtn" onclick="toggleView()">Grid</button>
+    </div>
+</div>
+
+<!-- Search bar -->
+<div class="papers-search-bar">
+    <input type="text" id="papersSearch" class="papers-search-input"
+           placeholder="Search by title, author, journal, year, or BibTeX ID..."
+           autocomplete="off">
+</div>
+
+<!-- Filter rows -->
+<div class="papers-filters">
+    <!-- Year pills -->
+    <div class="papers-filter-row">
+        <span class="papers-filter-label">Year</span>
+        <div class="papers-filter-pills" id="yearFilters">
+            <button class="filter-pill active" onclick="filterYear(this, '')">All</button>
+            {{/* Collect unique years from bibtex */}}
+            {{ $years := slice }}
+            {{ range $pages }}
+                {{ $bib := .Params.bibtex | default "" }}
+                {{ $yearMatch := findRE `year=\{(\d{4})\}` $bib 1 }}
+                {{ if $yearMatch }}
+                    {{ $y := replaceRE `year=\{(\d{4})\}` "$1" (index $yearMatch 0) }}
+                    {{ $years = $years | append $y }}
+                {{ end }}
+            {{ end }}
+            {{ $uniqueYears := sort (uniq $years) "value" "desc" }}
+            {{ range $uniqueYears }}
+            <button class="filter-pill" onclick="filterYear(this, '{{ . }}')">{{ . }}</button>
+            {{ end }}
+        </div>
+    </div>
+
+    <!-- Journal pills -->
+    <div class="papers-filter-row">
+        <span class="papers-filter-label">Journal</span>
+        <div class="papers-filter-pills" id="journalFilters">
+            <button class="filter-pill active" onclick="filterJournal(this, '')">All</button>
+            {{ $journals := slice }}
+            {{ range $pages }}
+                {{ $bib := .Params.bibtex | default "" }}
+                {{ $jMatch := findRE `journal=\{([^}]+)\}` $bib 1 }}
+                {{ if $jMatch }}
+                    {{ $j := replaceRE `journal=\{([^}]+)\}` "$1" (index $jMatch 0) }}
+                    {{ $journals = $journals | append $j }}
+                {{ end }}
+            {{ end }}
+            {{ $uniqueJournals := sort (uniq $journals) }}
+            {{ range $uniqueJournals }}
+            <button class="filter-pill" onclick="filterJournal(this, '{{ . }}')">{{ . }}</button>
+            {{ end }}
+        </div>
+    </div>
+
+    <!-- Tag pills -->
+    {{ $allTags := slice }}
+    {{ range $pages }}
+        {{ with .Params.tags }}
+            {{ range . }}
+                {{ $allTags = $allTags | append . }}
+            {{ end }}
+        {{ end }}
+    {{ end }}
+    {{ $uniqueTags := uniq $allTags }}
+    {{ if $uniqueTags }}
+    <div class="papers-filter-row">
+        <span class="papers-filter-label">Tags</span>
+        <div class="papers-filter-pills" id="tagFilters">
+            <button class="filter-pill active" onclick="filterTag(this, '')">All</button>
+            {{ range sort $uniqueTags }}
+            <button class="filter-pill" onclick="filterTag(this, '{{ . }}')">{{ . }}</button>
+            {{ end }}
+        </div>
+    </div>
+    {{ end }}
+</div>
+
+<!-- Results count -->
+<div class="papers-results-count" id="resultsCount" style="max-width: var(--max-page); margin: 0 auto; padding: 0 var(--space-lg) var(--space-sm); color: var(--muted); font-size: var(--font-size-sm);"></div>
+
+<!-- Paper list -->
+<ul class="page-list" id="pageList">
+    {{ range $pages }}
+    {{/* Extract metadata from bibtex */}}
+    {{ $bib := .Params.bibtex | default "" }}
+    {{ $authors := "" }}
+    {{ $authorMatch := findRE `author=\{([^}]+)\}` $bib 1 }}
+    {{ if $authorMatch }}
+        {{ $authors = replaceRE `author=\{([^}]+)\}` "$1" (index $authorMatch 0) }}
+    {{ end }}
+    {{ $year := "" }}
+    {{ $yearMatch := findRE `year=\{(\d{4})\}` $bib 1 }}
+    {{ if $yearMatch }}
+        {{ $year = replaceRE `year=\{(\d{4})\}` "$1" (index $yearMatch 0) }}
+    {{ end }}
+    {{ $journal := "" }}
+    {{ $jMatch := findRE `journal=\{([^}]+)\}` $bib 1 }}
+    {{ if $jMatch }}
+        {{ $journal = replaceRE `journal=\{([^}]+)\}` "$1" (index $jMatch 0) }}
+    {{ end }}
+    {{ $bibtexId := .Params.pageID | default "" }}
+
+    <li class="page-item section-border--papers"
+        data-title="{{ .Title }}"
+        data-authors="{{ $authors }}"
+        data-year="{{ $year }}"
+        data-journal="{{ $journal }}"
+        data-bibtex-id="{{ $bibtexId }}"
+        data-date="{{ .Lastmod.Format "2006-01-02" }}"
+        data-tags="{{ delimit (default (slice) .Params.tags) "," }}">
+        <div class="page-item__body">
+            <a href="{{ .RelPermalink }}" class="page-item__title">{{ .Title }}</a>
+            {{ if $authors }}
+            <div class="papers-item__authors">{{ $authors }}{{ with $year }} ({{ . }}){{ end }}</div>
+            {{ end }}
+            {{ if $journal }}
+            <div class="papers-item__journal">{{ $journal }}</div>
+            {{ end }}
+            <div class="page-item__meta">
+                {{ with .Params.tags }}
+                <div class="tag-pills">
+                    {{ range . }}<a href="/tags/{{ . | urlize }}/" class="tag-pill">{{ . }}</a>{{ end }}
+                </div>
+                {{ end }}
+                {{ if $bibtexId }}
+                <span class="papers-item__bibid">{{ $bibtexId }}</span>
+                {{ end }}
+            </div>
+        </div>
+        <span class="page-item__date">{{ .Lastmod.Format "Jan 2, 2006" }}</span>
+    </li>
+    {{ end }}
+</ul>
+
+<script>
+let currentSort = 'date-desc';
+let currentYear = '';
+let currentJournal = '';
+let currentTag = '';
+let searchQuery = '';
+
+const sortModes = [
+    { key: 'date-desc', label: 'Date Added', field: 'date', dir: 'desc' },
+    { key: 'year-desc', label: 'Year (New)', field: 'year', dir: 'desc' },
+    { key: 'year-asc',  label: 'Year (Old)', field: 'year', dir: 'asc' },
+    { key: 'author-az', label: 'Author A-Z', field: 'authors', dir: 'asc' },
+    { key: 'title-az',  label: 'Title A-Z', field: 'title', dir: 'asc' },
+];
+let sortIndex = 0;
+
+function cycleSort() {
+    sortIndex = (sortIndex + 1) % sortModes.length;
+    const mode = sortModes[sortIndex];
+    currentSort = mode.key;
+    document.getElementById('sortBtn').textContent = mode.label;
+    applySort();
+}
+
+function applySort() {
+    const list = document.getElementById('pageList');
+    const items = Array.from(list.children);
+    const mode = sortModes[sortIndex];
+    items.sort(function(a, b) {
+        let va = (a.dataset[mode.field] || '').toLowerCase();
+        let vb = (b.dataset[mode.field] || '').toLowerCase();
+        // For author sort, extract first last name
+        if (mode.field === 'authors') {
+            va = va.split(',')[0].trim();
+            vb = vb.split(',')[0].trim();
+        }
+        if (mode.dir === 'desc') return vb.localeCompare(va);
+        return va.localeCompare(vb);
+    });
+    items.forEach(function(i) { list.appendChild(i); });
+}
+
+function toggleView() {
+    const list = document.getElementById('pageList');
+    list.classList.toggle('grid-view');
+    document.getElementById('viewBtn').textContent = list.classList.contains('grid-view') ? 'List' : 'Grid';
+}
+
+function filterYear(btn, year) {
+    currentYear = year;
+    document.querySelectorAll('#yearFilters .filter-pill').forEach(function(p) { p.classList.remove('active'); });
+    btn.classList.add('active');
+    applyFilters();
+}
+
+function filterJournal(btn, journal) {
+    currentJournal = journal;
+    document.querySelectorAll('#journalFilters .filter-pill').forEach(function(p) { p.classList.remove('active'); });
+    btn.classList.add('active');
+    applyFilters();
+}
+
+function filterTag(btn, tag) {
+    currentTag = tag;
+    document.querySelectorAll('#tagFilters .filter-pill').forEach(function(p) { p.classList.remove('active'); });
+    btn.classList.add('active');
+    applyFilters();
+}
+
+function applyFilters() {
+    let visible = 0;
+    const total = document.querySelectorAll('.page-item').length;
+    document.querySelectorAll('.page-item').forEach(function(item) {
+        let show = true;
+
+        // Year filter
+        if (currentYear && item.dataset.year !== currentYear) show = false;
+
+        // Journal filter
+        if (currentJournal && item.dataset.journal !== currentJournal) show = false;
+
+        // Tag filter
+        if (currentTag) {
+            const tags = (item.dataset.tags || '').split(',');
+            if (!tags.includes(currentTag)) show = false;
+        }
+
+        // Search filter
+        if (searchQuery) {
+            const haystack = [
+                item.dataset.title,
+                item.dataset.authors,
+                item.dataset.journal,
+                item.dataset.year,
+                item.dataset.bibtexId,
+                item.dataset.tags
+            ].join(' ').toLowerCase();
+            if (!haystack.includes(searchQuery)) show = false;
+        }
+
+        item.style.display = show ? '' : 'none';
+        if (show) visible++;
+    });
+
+    const countEl = document.getElementById('resultsCount');
+    if (currentYear || currentJournal || currentTag || searchQuery) {
+        countEl.textContent = 'Showing ' + visible + ' of ' + total + ' papers';
+    } else {
+        countEl.textContent = '';
+    }
+}
+
+// Search input
+document.getElementById('papersSearch').addEventListener('input', function(e) {
+    searchQuery = e.target.value.toLowerCase().trim();
+    applyFilters();
+});
+
+// Keyboard shortcut: focus search with /
+document.addEventListener('keydown', function(e) {
+    if (e.key === '/' && !e.ctrlKey && !e.metaKey) {
+        const active = document.activeElement;
+        if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA')) return;
+        e.preventDefault();
+        document.getElementById('papersSearch').focus();
+    }
+});
+</script>
+{{ end }}

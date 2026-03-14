@@ -1,0 +1,11 @@
+{{ $file := .Get "file" }}
+{{ $height := .Get "height" | default "600" }}
+{{ $width := .Get "width" | default "800" }}
+<div class="plotly-container" style="max-width: {{ $width }}px; max-height: {{ $height }}px; overflow: auto;">
+    {{ $path := path.Join .Page.File.Dir $file }}
+    {{ with $path | readFile }}
+        {{ . | safeHTML }}
+    {{ else }}
+        <p>File not found: {{ $path }}</p>
+    {{ end }}
+</div>

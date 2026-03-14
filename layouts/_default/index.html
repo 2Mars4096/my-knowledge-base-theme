@@ -1,0 +1,62 @@
+{{ define "main" }}
+<div class="dashboard">
+    <!-- Left: Recent Activity -->
+    <div>
+        <h2>Recent Activity</h2>
+        <ul class="recent-list">
+            {{ $recentItems := .Site.Params.recentItems | default 20 }}
+            {{ range first $recentItems .Site.RegularPages.ByLastmod.Reverse }}
+            {{ $sec := .Section }}
+            <li class="recent-item section-border--{{ $sec }}">
+                <div class="recent-item__body">
+                    <a href="{{ .RelPermalink }}" class="recent-item__title">{{ .Title }}</a>
+                    <div class="recent-item__date">
+                        {{ with .Params.subtitle }}<span>{{ . }} &middot; </span>{{ end }}
+                        {{ .Lastmod.Format "Jan 2, 2006" }}
+                    </div>
+                    {{ with .Params.tags }}
+                    <div class="tag-pills" style="margin-top: 4px;">
+                        {{ range . }}<a href="/tags/{{ . | urlize }}/" class="tag-pill">{{ . }}</a>{{ end }}
+                    </div>
+                    {{ end }}
+                </div>
+            </li>
+            {{ end }}
+        </ul>
+    </div>
+
+    <!-- Right: Sidebar -->
+    <div>
+        <!-- Sections -->
+        <div class="sidebar-section">
+            <h2>Sections</h2>
+            <ul class="quick-nav">
+                {{ $sections := .Site.Params.navSections | default (slice "papers" "notes" "log" "to-do" "blogs") }}
+                {{ range $sections }}
+                {{ $sec := . }}
+                {{ $pages := where $.Site.RegularPages "Section" $sec }}
+                <li>
+                    <a href="/{{ $sec }}/" class="section-border--{{ $sec }}">
+                        {{ $sec | title }}
+                        <span class="quick-nav__count">{{ len $pages }}</span>
+                    </a>
+                </li>
+                {{ end }}
+            </ul>
+        </div>
+
+        <!-- Tags -->
+        <div class="sidebar-section">
+            <h2>Tags</h2>
+            <div class="tag-cloud">
+                {{ range .Site.Taxonomies.tags.Alphabetical }}
+                <a href="{{ .Page.RelPermalink }}" class="tag-pill">{{ .Page.Title }} ({{ .Count }})</a>
+                {{ end }}
+                {{ if eq (len .Site.Taxonomies.tags) 0 }}
+                <span class="page-meta">No tags yet. Add <code>tags: [topic]</code> to front matter.</span>
+                {{ end }}
+            </div>
+        </div>
+    </div>
+</div>
+{{ end }}

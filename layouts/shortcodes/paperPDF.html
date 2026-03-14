@@ -1,0 +1,13 @@
+{{ $filename := .Get "filename" }}
+<div class="pdf-container">
+    <iframe
+        src="/papers/{{ $filename }}#view=FitH"
+        width="100%"
+        height="{{ .Get "height" | default "800px" }}"
+        style="border: none; width: 100%;"
+        allowfullscreen>
+        <p>It appears your browser doesn't support iframes. You can 
+            <a href="/papers/{{ $filename }}">download the PDF</a> instead.
+        </p>
+    </iframe>
+</div>

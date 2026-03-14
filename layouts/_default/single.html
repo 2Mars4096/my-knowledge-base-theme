@@ -1,0 +1,617 @@
+{{ define "main" }}
+
+<!-- Breadcrumbs -->
+<div class="breadcrumbs" style="padding: var(--space-sm) var(--space-lg) 0;">
+    <a href="/">Home</a>
+    {{ range .Ancestors.Reverse }}
+        {{ if not .IsHome }}
+        <span>&rsaquo;</span>
+        <a href="{{ .RelPermalink }}">{{ .Title }}</a>
+        {{ end }}
+    {{ end }}
+    <span>&rsaquo;</span> {{ .Title }}
+</div>
+
+{{ partial "page-nav.html" . }}
+
+<div class="three-col">
+    <!-- Left column: Table of Contents -->
+    <aside class="toc-sidebar">
+        <h3>Contents</h3>
+        <ul id="toc">
+            <!-- TOC populated by JavaScript -->
+        </ul>
+    </aside>
+
+    <!-- Middle column: Content -->
+    <article id="main-content" class="content-area">
+        {{ with .Params.subtitle }}<h2 style="margin-top: 0;">{{ . }}</h2>{{ end }}
+
+        <div class="page-meta">
+            {{ with .Params.author }}<strong>Author:</strong> {{ . }}<br>{{ end }}
+            {{ with .Date }}<strong>Date:</strong> {{ .Format "Jan 2, 2006" }}<br>{{ end }}
+            {{ with .Lastmod }}<strong>Last Modified:</strong> {{ .Format "Jan 2, 2006 15:04:05" }}<br>{{ end }}
+            {{ with .Params.link }}<strong>Link:</strong> <a href="{{ . }}" target="_blank">{{ . }}</a><br>{{ end }}
+            {{ if .Params.draft }}<strong>Status:</strong> Draft<br>{{ end }}
+            {{ with .File }}<a href="#" class="edit-source-link" data-filepath="{{ $.File.Filename }}" title="Open in editor (⌘E)">Edit source <kbd>⌘E</kbd></a>{{ end }}
+            <button class="export-pdf-btn" onclick="exportPDF()" title="Export as PDF">Export PDF</button>
+        </div>
+
+        {{ with .Params.tags }}
+        <div class="tag-pills" style="margin-bottom: var(--space-lg);">
+            {{ range . }}<a href="/tags/{{ . | urlize }}/" class="tag-pill">{{ . }}</a>{{ end }}
+        </div>
+        {{ end }}
+
+        <div id="print-toc" class="print-only"></div>
+
+        {{ .Content | replaceRE `<h2 id="references">References</h2>\s*<div class="footnotes" role="doc-endnotes">\s*<hr>\s*<ol>[\s\S]*?</ol>\s*</div>` `` | safeHTML }}
+
+        {{ $enableBackCite := .Site.Params.enableBackwardCitations | default true }}
+        {{ if and .Params.pageID (ne .Params.backwardCitation false) $enableBackCite }}
+            {{ $pageID := .Params.pageID }}
+            {{ $citations := slice }}
+            {{ $citeSections := .Site.Params.citationSections | default (slice "papers" "notes" "blogs" "log" "to-do") }}
+
+            {{ range where .Site.RegularPages "Section" "in" $citeSections }}
+                {{ $context := findRE (printf ".{0,200}@%s\\b.{0,200}" $pageID) .RawContent }}
+                {{ if $context }}
+                    {{ $citations = $citations | append (dict
+                        "title" .Title
+                        "link" .RelPermalink
+                        "date" .Date
+                        "context" (index $context 0)
+                    ) }}
+                {{ end }}
+            {{ end }}
+
+            {{ if $citations }}
+                <div class="cited-by">
+                    <h2>Cited By</h2>
+                    <ul>
+                    {{ range sort $citations "date" "desc" }}
+                        <li>
+                            <a href="{{ .link }}">{{ .title }}</a>
+                            <span class="page-meta"> ({{ .date.Format "Jan 2, 2006" }})</span>
+                            {{ with .context }}
+                                <div class="context-snippet">"...{{ . }}..."</div>
+                            {{ end }}
+                        </li>
+                    {{ end }}
+                    </ul>
+                </div>
+            {{ end }}
+        {{ end }}
+
+        <div id="print-footnotes" class="print-only"></div>
+    </article>
+
+    <!-- Right column: Notes / Footnotes -->
+    <aside id="notes" class="notes-sidebar">
+        <h3>Notes</h3>
+        <div id="footnote-container"></div>
+    </aside>
+</div>
+
+<script>
+// --- Lazy loading & progressive loading ---
+const lazyLoadObserver = new IntersectionObserver((entries, observer) => {
+    entries.forEach(entry => {
+        if (entry.isIntersecting) {
+            entry.target.classList.add('loaded');
+            observer.unobserve(entry.target);
+        }
+    });
+}, { rootMargin: '50px 0px', threshold: 0.1 });
+
+const progressiveLoadObserver = new IntersectionObserver((entries, observer) => {
+    entries.forEach(entry => {
+        if (entry.isIntersecting) {
+            entry.target.classList.add('visible');
+            observer.unobserve(entry.target);
+        }
+    });
+}, { rootMargin: '0px', threshold: 0.1 });
+
+const mutationObserver = new MutationObserver((mutations) => {
+    mutations.forEach(mutation => {
+        mutation.addedNodes.forEach(node => {
+            if (node.nodeType === 1) {
+                node.querySelectorAll('img').forEach(img => {
+                    img.classList.add('lazy-load');
+                    lazyLoadObserver.observe(img);
+                });
+                if (node.classList.contains('toc-item')) progressiveLoadObserver.observe(node);
+                if (node.classList.contains('footnote-wrapper')) progressiveLoadObserver.observe(node);
+            }
+        });
+    });
+});
+
+// --- TOC initialization ---
+document.addEventListener('DOMContentLoaded', function() {
+    mutationObserver.observe(document.body, { childList: true, subtree: true });
+    document.querySelectorAll('img').forEach(img => {
+        img.classList.add('lazy-load');
+        lazyLoadObserver.observe(img);
+    });
+
+    const toc = document.getElementById('toc');
+    const articleContent = document.getElementById('main-content');
+
+    if (toc && articleContent) {
+        const headings = articleContent.querySelectorAll('h2, h3');
+        document.documentElement.style.scrollBehavior = 'smooth';
+        let delay = 0;
+        headings.forEach(function(heading) {
+            if (heading.closest('.Params')) return;
+            if (!heading.id) {
+                heading.id = heading.textContent.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-');
+            }
+            const level = heading.tagName.toLowerCase();
+            const listItem = document.createElement('li');
+            listItem.className = 'toc-item' + (level === 'h3' ? ' toc-h3' : '');
+            listItem.style.transitionDelay = delay + 'ms';
+            delay += 50;
+            const link = document.createElement('a');
+            link.href = '#' + heading.id;
+            link.textContent = heading.textContent;
+            link.className = 'toc-link';
+            listItem.appendChild(link);
+            toc.appendChild(listItem);
+            progressiveLoadObserver.observe(listItem);
+        });
+        if (!toc.hasChildNodes()) toc.closest('aside').style.display = 'none';
+    }
+});
+
+// --- Footnotes, Citations, Scroll ---
+window.addEventListener('load', async function() {
+    const DEBUG_CITATIONS = false;
+
+    const initFootnotes = () => {
+        const footnotes = document.querySelectorAll('sup[id^="fnref:"]');
+        const footnoteContainer = document.getElementById('footnote-container');
+        const notesAside = footnoteContainer?.closest('aside');
+        if (!footnoteContainer || !notesAside) return;
+
+        footnoteContainer.style.position = 'relative';
+        notesAside.style.position = 'relative';
+        notesAside.style.overflow = 'hidden';
+
+        let footnoteIndex = 1;
+        const referenceSpans = [];
+
+        footnotes.forEach(function(footnote) {
+            const footnoteLink = footnote.querySelector('a');
+            if (!footnoteLink) return;
+            const id = footnoteLink.getAttribute('href').substring(1);
+            const footnoteDef = document.getElementById(id);
+            if (footnoteDef) {
+                footnote.style.fontSize = '0.8em';
+                footnote.style.color = 'var(--muted)';
+                footnote.style.cursor = 'pointer';
+                footnoteLink.style.textDecoration = 'none';
+                footnoteLink.style.color = 'inherit';
+                referenceSpans.push({ span: footnote, id: id, index: footnoteIndex, def: footnoteDef });
+                footnote.addEventListener('mouseenter', () => {
+                    const note = document.getElementById('note-' + id);
+                    if (note) note.style.backgroundColor = 'var(--surface)';
+                });
+                footnote.addEventListener('mouseleave', () => {
+                    const note = document.getElementById('note-' + id);
+                    if (note) note.style.backgroundColor = 'var(--bg)';
+                });
+                footnoteIndex++;
+            }
+        });
+
+        const footnotePositions = referenceSpans.map(ref => ({
+            index: ref.index, id: ref.id, top: ref.span.getBoundingClientRect().top,
+            def: ref.def, height: ref.span.getBoundingClientRect().height
+        }));
+
+        let lastBottom = 0;
+        footnotePositions.forEach(function(note) {
+            const wrapper = document.createElement('div');
+            wrapper.className = 'footnote-wrapper';
+            wrapper.id = 'note-' + note.id;
+            const indexSpan = document.createElement('span');
+            indexSpan.textContent = '[' + note.index + ']';
+            indexSpan.className = 'footnote-index';
+            const content = note.def.querySelector('p').cloneNode(true);
+            content.className = 'footnote-content';
+            wrapper.appendChild(indexSpan);
+            wrapper.appendChild(content);
+            wrapper.style.visibility = 'hidden';
+            footnoteContainer.appendChild(wrapper);
+            const height = wrapper.offsetHeight;
+            let proposedTop = note.top - footnoteContainer.getBoundingClientRect().top;
+            proposedTop = Math.max(proposedTop, lastBottom + 8);
+            wrapper.style.top = proposedTop + 'px';
+            wrapper.style.visibility = 'visible';
+            lastBottom = proposedTop + height;
+            wrapper.style.transitionDelay = (note.index * 50) + 'ms';
+            progressiveLoadObserver.observe(wrapper);
+        });
+
+        if (!footnoteContainer.hasChildNodes()) {
+            notesAside.style.display = 'none';
+            document.querySelector('.content-area')?.classList.add('expanded');
+        }
+    };
+
+    const initCitations = () => {
+        const content = document.querySelector('#main-content');
+        if (!content) return;
+        const citationPattern = /@([a-zA-Z0-9_-]+)/g;
+        const text = content.innerHTML;
+        const citations = text.match(citationPattern);
+        if (!citations) return;
+
+        const uniqueCitations = new Set();
+        for (const citation of citations) {
+            const pageID = citation.substring(1);
+            const bibtexElement = document.querySelector('[data-pageid="' + pageID + '"]');
+            if (!bibtexElement) continue;
+            const bibtex = bibtexElement.getAttribute('data-bibtex');
+            const pageUrl = bibtexElement.getAttribute('data-url');
+
+            if (!bibtex) {
+                content.innerHTML = content.innerHTML.replace(
+                    new RegExp(citation.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'),
+                    '<a href="' + pageUrl + '" class="citation">' + citation + '</a>'
+                );
+                continue;
+            }
+
+            const authorMatch = bibtex.match(/author={([^}]+)}/);
+            const yearMatch = bibtex.match(/year={([^}]+)}/);
+            if (!authorMatch || !yearMatch) {
+                content.innerHTML = content.innerHTML.replace(
+                    new RegExp(citation.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'),
+                    '<a href="' + pageUrl + '" class="citation">' + citation + '</a>'
+                );
+                continue;
+            }
+
+            const authors = authorMatch[1].split(' and ');
+            let citation_text = '';
+            if (authors.length === 1) {
+                citation_text = authors[0].split(',')[0].trim() + ' (' + yearMatch[1] + ')';
+            } else if (authors.length === 2) {
+                citation_text = authors[0].split(',')[0].trim() + ' and ' + authors[1].split(',')[0].trim() + ' (' + yearMatch[1] + ')';
+            } else {
+                citation_text = authors[0].split(',')[0].trim() + ' et al. (' + yearMatch[1] + ')';
+            }
+
+            content.innerHTML = content.innerHTML.replace(
+                new RegExp(citation.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'),
+                '<a href="' + pageUrl + '" class="citation" id="' + pageID + '">' + citation_text + '</a>'
+            );
+            uniqueCitations.add(pageID);
+        }
+
+        if (uniqueCitations.size > 0) {
+            const referencesSection = document.createElement('div');
+            referencesSection.className = 'references';
+            referencesSection.innerHTML = '<h2>References</h2>';
+            const referencesList = document.createElement('div');
+            referencesList.className = 'references-list';
+
+            const references = Array.from(uniqueCitations).map(pageID => {
+                const el = document.querySelector('[data-pageid="' + pageID + '"]');
+                const bibtex = el.getAttribute('data-bibtex');
+                const pageUrl = el.getAttribute('data-url');
+                if (!bibtex) return { reference: pageID, pageUrl: pageUrl, sortKey: pageID.toLowerCase() };
+                const authors = bibtex.match(/author={([^}]+)}/)[1].split(' and ');
+                const year = bibtex.match(/year={([^}]+)}/)[1];
+                const title = bibtex.match(/title={([^}]+)}/)[1];
+                const journal = bibtex.match(/journal={([^}]+)}/)?.[1];
+                const pages = bibtex.match(/pages={([^}]+)}/)?.[1];
+                const formattedAuthors = authors.map(a => {
+                    const [last, first] = a.split(',').map(s => s.trim());
+                    return last + ', ' + first.charAt(0) + '.';
+                }).join(', ');
+                let reference = formattedAuthors + ' (' + year + '). ' + title;
+                if (journal) { reference += '. <em>' + journal + '</em>'; if (pages) reference += ', ' + pages; }
+                reference += '.';
+                return { reference, pageUrl, sortKey: authors[0].split(',')[0].trim().toLowerCase() };
+            }).sort((a, b) => a.sortKey.localeCompare(b.sortKey));
+
+            references.forEach(({ reference, pageUrl }, index) => {
+                const refDiv = document.createElement('div');
+                refDiv.style.marginBottom = '1em';
+                refDiv.style.paddingLeft = '2em';
+                refDiv.style.textIndent = '-2em';
+                refDiv.innerHTML = '<span class="reference-index">[' + (index + 1) + ']</span> <a href="' + pageUrl + '" style="text-decoration: none; color: inherit;">' + reference + '</a>';
+                referencesList.appendChild(refDiv);
+            });
+            referencesSection.appendChild(referencesList);
+
+            // Export BibTeX button
+            const exportBtn = document.createElement('button');
+            exportBtn.className = 'export-bib-btn';
+            exportBtn.textContent = 'Export BibTeX';
+            exportBtn.title = 'Download .bib file for all references on this page';
+            exportBtn.addEventListener('click', function() {
+                const bibEntries = Array.from(uniqueCitations).map(function(id) {
+                    const el = document.querySelector('[data-pageid="' + id + '"]');
+                    if (!el) return null;
+                    const raw = el.getAttribute('data-bibtex');
+                    if (!raw) return null;
+                    // Restore single quotes back to double quotes for valid BibTeX
+                    return raw.replace(/'/g, '"').trim();
+                }).filter(Boolean).join('\n\n');
+                if (!bibEntries) return;
+                const blob = new Blob([bibEntries + '\n'], { type: 'application/x-bibtex' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'references.bib';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            });
+            referencesSection.appendChild(exportBtn);
+
+            content.appendChild(referencesSection);
+        }
+    };
+
+    const initScrollHandling = () => {
+        let scrollTimeout;
+        window.addEventListener('scroll', function() {
+            if (scrollTimeout) window.cancelAnimationFrame(scrollTimeout);
+            scrollTimeout = window.requestAnimationFrame(function() {
+                const headings = Array.from(document.querySelectorAll('#main-content h2, #main-content h3'));
+                const tocLinks = document.querySelectorAll('.toc-link');
+                let currentHeading = null;
+                for (const heading of headings) {
+                    if (heading.getBoundingClientRect().top <= 100) currentHeading = heading;
+                    else break;
+                }
+                tocLinks.forEach(link => {
+                    link.classList.toggle('active', currentHeading && link.getAttribute('href') === '#' + currentHeading.id);
+                });
+                const fc = document.getElementById('footnote-container');
+                if (fc) {
+                    Array.from(fc.children).forEach(note => {
+                        const r = note.getBoundingClientRect();
+                        const top = r.top + window.scrollY;
+                        note.style.opacity = (top < window.scrollY || top + r.height > window.scrollY + window.innerHeight) ? '0.3' : '1';
+                    });
+                }
+            });
+        });
+    };
+
+    initScrollHandling();
+    setTimeout(() => { initFootnotes(); initCitations(); }, 100);
+
+    if (window.MathJax) {
+        const rerun = () => { initCitations(); };
+        if (MathJax.Hub) MathJax.Hub.Queue(rerun);
+        else if (MathJax.startup) MathJax.startup.promise.then(rerun);
+    }
+});
+</script>
+
+<!-- Edit in editor (Cursor with VS Code fallback) -->
+<script>
+(function() {
+    const editLink = document.querySelector('.edit-source-link');
+    if (!editLink) return;
+    const filepath = editLink.dataset.filepath;
+    if (!filepath) return;
+
+    function openInEditor(path) {
+        // Try Cursor first, fall back to VS Code
+        var cursorUrl = 'cursor://file/' + path;
+        var vscodeUrl = 'vscode://file/' + path;
+        // Attempt Cursor; if it doesn't open (no handler), try VS Code after a short delay
+        var w = window.open(cursorUrl, '_self');
+        setTimeout(function() {
+            // If we're still here, Cursor may not be installed; try VS Code
+            window.location.href = vscodeUrl;
+        }, 300);
+    }
+
+    editLink.addEventListener('click', function(e) {
+        e.preventDefault();
+        openInEditor(filepath);
+    });
+
+    // Keyboard shortcut: Cmd+E (Mac) or Ctrl+E (Windows/Linux) to edit
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'e' && (e.metaKey || e.ctrlKey) && !e.altKey && !e.shiftKey) {
+            e.preventDefault();
+            openInEditor(filepath);
+        }
+    });
+})();
+</script>
+
+<!-- Export PDF -->
+<script>
+function populatePrintElements() {
+    var pt = document.getElementById('print-toc');
+    var pf = document.getElementById('print-footnotes');
+    var hh = document.querySelectorAll('#main-content h2, #main-content h3');
+    if (pt && !pt.innerHTML.trim()) {
+        var items = [], h2n = 0, h3n = 0;
+        hh.forEach(function(h) {
+            if (h.closest('.print-only') || h.closest('.cited-by') || h.closest('.references')) return;
+            if (h.getAttribute('style') && h.getAttribute('style').indexOf('margin-top: 0') >= 0) return;
+            items.push({ tag: h.tagName, text: h.textContent.trim() });
+        });
+        if (items.length > 0) {
+            var s = '<p class="print-section-title">Table of Contents</p><ul class="print-toc-list">';
+            items.forEach(function(i) {
+                if (i.tag === 'H2') { h2n++; h3n = 0; s += '<li class="print-toc-h2">' + h2n + '. ' + i.text + '</li>'; }
+                else { h3n++; s += '<li class="print-toc-h3">' + h2n + '.' + h3n + ' ' + i.text + '</li>'; }
+            });
+            pt.innerHTML = s + '</ul>';
+        }
+    }
+    if (pf && !pf.innerHTML.trim()) {
+        var notes = document.querySelectorAll('#footnote-container .footnote-wrapper');
+        if (notes.length > 0) {
+            var f = '<hr><p class="print-section-title">Notes</p><ol class="print-footnotes-list">';
+            notes.forEach(function(n) { var c = n.querySelector('.footnote-content'); if (c) f += '<li>' + c.innerHTML + '</li>'; });
+            pf.innerHTML = f + '</ol>';
+        }
+    }
+}
+window.addEventListener('beforeprint', populatePrintElements);
+
+function exportPDF() {
+    var titleEl = document.querySelector('.page-nav__title h1');
+    var titleText = titleEl ? titleEl.textContent.trim() : 'Document';
+
+    var cc = document.getElementById('main-content').cloneNode(true);
+    cc.removeAttribute('id');
+    cc.querySelectorAll('.edit-source-link, .export-pdf-btn, .print-only, .tag-pills, .cited-by, .export-bib-btn, kbd, .footnotes[role="doc-endnotes"]').forEach(function(n) { n.remove(); });
+
+    var subEl = cc.querySelector('h2[style*="margin-top: 0"]');
+    var subText = subEl ? subEl.textContent.trim() : '';
+    if (subEl) subEl.remove();
+    var metaEl = cc.querySelector('.page-meta');
+    if (metaEl) metaEl.remove();
+
+    var tocItems = [];
+    cc.querySelectorAll('h2, h3').forEach(function(h, idx) {
+        if (h.closest('.references')) return;
+        var id = 'sec-' + idx;
+        h.id = id;
+        tocItems.push({ level: h.tagName.toLowerCase(), text: h.textContent.trim(), id: id });
+    });
+
+    var fnData = [];
+    document.querySelectorAll('#footnote-container .footnote-wrapper').forEach(function(n) {
+        var c = n.querySelector('.footnote-content');
+        if (c) fnData.push(c.innerHTML);
+    });
+
+    var tocHtml = '';
+    if (tocItems.length > 0) {
+        tocHtml = '<div class="toc"><div class="toc-title">Table of Contents</div>';
+        var h2n = 0, h3n = 0;
+        tocItems.forEach(function(item) {
+            if (item.level === 'h2') { h2n++; h3n = 0; tocHtml += '<div class="toc-h2"><a href="#' + item.id + '">' + h2n + '. ' + item.text + '</a></div>'; }
+            else { h3n++; tocHtml += '<div class="toc-h3"><a href="#' + item.id + '">' + h2n + '.' + h3n + ' ' + item.text + '</a></div>'; }
+        });
+        tocHtml += '</div>';
+    }
+
+    var fnHtml = '';
+    if (fnData.length > 0) {
+        fnHtml = '<div class="footnotes-section"><hr><div class="fn-title">Notes</div><ol>';
+        fnData.forEach(function(html) { fnHtml += '<li>' + html + '</li>'; });
+        fnHtml += '</ol></div>';
+    }
+
+    var metaHtml = '';
+    var liveMeta = document.querySelector('.page-meta');
+    if (liveMeta) {
+        var mc = liveMeta.cloneNode(true);
+        mc.querySelectorAll('.edit-source-link, .export-pdf-btn, kbd').forEach(function(n) { n.remove(); });
+        metaHtml = mc.innerHTML;
+    }
+
+    var mjxStyles = '';
+    document.querySelectorAll('style[id^="MJX"]').forEach(function(s) { mjxStyles += s.outerHTML; });
+
+    var html = '<!DOCTYPE html><html><head><meta charset="utf-8">'
+        + '<title>' + titleText + '</title>'
+        + '<link rel="preconnect" href="https://fonts.googleapis.com">'
+        + '<link href="https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">'
+        + mjxStyles
+        + '<style>'
+        + '*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }'
+        + 'body { font-family: "Open Sans", sans-serif; font-size: 9.5pt; line-height: 1.6; color: #1c1917; max-width: 960px; margin: 0 auto; padding: 40px 24px; }'
+        + 'h1 { font-size: 1.8rem; font-weight: 700; margin: 0 0 0.3em; line-height: 1.25; }'
+        + '.subtitle { font-size: 1.1rem; color: #57534e; margin-bottom: 0.6em; }'
+        + '.meta { font-size: 0.85rem; color: #78716c; margin-bottom: 1.5em; line-height: 1.6; }'
+        + '.toc { border: 1px solid #d6d3d1; border-radius: 6px; padding: 12px 18px; margin-bottom: 1.5em; page-break-inside: avoid; }'
+        + '.toc-title { font-weight: 700; margin-bottom: 6px; }'
+        + '.toc-h2 { margin-bottom: 3px; }'
+        + '.toc-h3 { margin-left: 1.5em; margin-bottom: 2px; color: #78716c; font-size: 0.93em; }'
+        + 'h2 { font-size: 1.3rem; font-weight: 600; margin: 1.3em 0 0.5em; page-break-after: avoid; }'
+        + 'h3 { font-size: 1.1rem; font-weight: 600; margin: 1.1em 0 0.4em; page-break-after: avoid; }'
+        + 'h4 { font-size: 1rem; font-weight: 600; margin: 1em 0 0.3em; page-break-after: avoid; }'
+        + 'p { margin: 0 0 0.65em; orphans: 3; widows: 3; }'
+        + 'a { color: #2563eb; text-decoration: none; }'
+        + 'a:hover { text-decoration: underline; }'
+        + 'img { max-width: 100%; height: auto; display: block; margin: 0.8em auto; border-radius: 4px; }'
+        + 'figure { margin: 0.8em 0; text-align: center; page-break-inside: avoid; }'
+        + 'figcaption { font-size: 0.85rem; color: #78716c; margin-top: 0.3em; }'
+        + 'blockquote { border-left: 3px solid #2563eb; background: #fafaf9; margin: 0.6em 0; padding: 0.5em 1em; color: #44403c; border-radius: 0 4px 4px 0; }'
+        + 'blockquote p:last-child { margin-bottom: 0; }'
+        + 'pre { background: #282c34; color: #abb2bf; border-radius: 6px; padding: 12px 16px; overflow-x: auto; margin: 0.6em 0; font-size: 0.85rem; page-break-inside: avoid; }'
+        + 'pre code { background: none; padding: 0; color: inherit; }'
+        + 'code { background: #f5f5f4; padding: 1px 5px; border-radius: 3px; font-size: 0.88em; }'
+        + 'table { width: 100%; border-collapse: collapse; margin: 0.6em 0; font-size: 0.9rem; page-break-inside: avoid; }'
+        + 'th, td { border: 1px solid #d6d3d1; padding: 6px 10px; text-align: left; }'
+        + 'th { background: #f5f5f4; font-weight: 600; }'
+        + 'ul, ol { margin: 0 0 0.65em 1.5em; }'
+        + 'li { margin-bottom: 0.25em; }'
+        + '.callout { border-left: 4px solid #2563eb; background: #fafaf9; border-radius: 0 6px 6px 0; padding: 10px 16px; margin: 0.6em 0; page-break-inside: avoid; }'
+        + '.callout__header { font-weight: 600; margin-bottom: 4px; }'
+        + '.callout p:last-child { margin-bottom: 0; }'
+        + '.math-block { border-left: 3px solid #d6d3d1; padding: 10px 16px; margin: 0.6em 0; background: #fafaf9; border-radius: 0 4px 4px 0; page-break-inside: avoid; }'
+        + '.math-block__label { font-weight: 700; margin-bottom: 4px; }'
+        + '.proof-block { margin: 0.6em 0; padding: 10px 16px; }'
+        + '.proof-block__label { font-style: italic; font-weight: 600; margin-bottom: 4px; }'
+        + '.proof-block__qed { text-align: right; }'
+        + 'hr { border: none; border-top: 1px solid #d6d3d1; margin: 1.2em 0; }'
+        + '.footnotes-section { margin-top: 2em; }'
+        + '.footnotes-section hr { width: 30%; }'
+        + '.fn-title { font-weight: 700; margin-bottom: 0.4em; }'
+        + '.footnotes-section ol { padding-left: 1.5em; font-size: 0.85rem; color: #57534e; }'
+        + '.footnotes-section li { margin-bottom: 4px; }'
+        + '.sup-ref { font-size: 0.75em; vertical-align: super; color: #2563eb; }'
+        + '@page { size: A4; margin: 10mm; }'
+        + '@media print {'
+        + '  body { max-width: none; padding: 0; }'
+        + '  h2, h3, h4 { page-break-after: avoid; }'
+        + '  h2 + *, h3 + *, h4 + * { page-break-before: avoid; }'
+        + '  blockquote, .callout, .math-block, pre, table, figure { page-break-inside: avoid; }'
+        + '  a[href]::after { content: none; }'
+        + '  pre { white-space: pre-wrap; word-wrap: break-word; }'
+        + '}'
+        + '</style></head><body>'
+        + '<h1>' + titleText + '</h1>'
+        + (subText ? '<p class="subtitle">' + subText + '</p>' : '')
+        + (metaHtml ? '<div class="meta">' + metaHtml + '</div>' : '')
+        + tocHtml
+        + cc.innerHTML
+        + fnHtml
+        + '</body></html>';
+
+    var blob = new Blob([html], { type: 'text/html' });
+    var url = URL.createObjectURL(blob);
+    var w = window.open(url, '_blank');
+    if (!w) { alert('Pop-up blocked. Please allow pop-ups for this site and try again.'); return; }
+
+    w.onload = function() {
+        w.focus();
+        w.print();
+        URL.revokeObjectURL(url);
+    };
+}
+</script>
+
+<!-- Hidden bibtex data for citation processing -->
+{{ range .Site.RegularPages }}
+    {{ if .Params.pageID }}
+        <div hidden
+            data-pageid="{{ .Params.pageID }}"
+            data-bibtex="{{ with .Params.bibtex }}{{ . | replaceRE "\n" " " | replaceRE "\"" "'" }}{{ end }}"
+            data-url="{{ .RelPermalink }}"
+        ></div>
+    {{ end }}
+{{ end }}
+
+{{ end }}

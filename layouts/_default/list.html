@@ -1,0 +1,85 @@
+{{ define "main" }}
+{{ $sectionName := .Title }}
+{{ $pages := sort .RegularPagesRecursive "Lastmod" "desc" }}
+{{ $section := .Section }}
+
+<div class="list-header">
+    <h1>{{ $sectionName }} <span class="list-header__count">({{ len $pages }})</span></h1>
+    <div class="list-controls">
+        <button id="sortBtn" onclick="toggleSort()">A-Z</button>
+        <button id="viewBtn" onclick="toggleView()">Grid</button>
+    </div>
+</div>
+
+<!-- Tag filter bar -->
+{{ $allTags := slice }}
+{{ range $pages }}
+    {{ with .Params.tags }}
+        {{ range . }}
+            {{ $allTags = $allTags | append . }}
+        {{ end }}
+    {{ end }}
+{{ end }}
+{{ $uniqueTags := uniq $allTags }}
+{{ if $uniqueTags }}
+<div class="list-filter-bar">
+    <button class="filter-pill active" onclick="filterTag(this, '')">All</button>
+    {{ range sort $uniqueTags }}
+    <button class="filter-pill" onclick="filterTag(this, '{{ . }}')">{{ . }}</button>
+    {{ end }}
+</div>
+{{ end }}
+
+<ul class="page-list" id="pageList">
+    {{ range $pages }}
+    <li class="page-item section-border--{{ $section }}" data-title="{{ .Title }}" data-date="{{ .Lastmod.Format "2006-01-02" }}" data-tags="{{ delimit (default (slice) .Params.tags) "," }}">
+        <div class="page-item__body">
+            <a href="{{ .RelPermalink }}" class="page-item__title">{{ .Title }}</a>
+            {{ with .Params.subtitle }}<div class="page-item__subtitle">{{ . }}</div>{{ end }}
+            <div class="page-item__meta">
+                {{ with .Params.tags }}
+                <div class="tag-pills">
+                    {{ range . }}<a href="/tags/{{ . | urlize }}/" class="tag-pill">{{ . }}</a>{{ end }}
+                </div>
+                {{ end }}
+            </div>
+        </div>
+        <span class="page-item__date">{{ .Lastmod.Format "Jan 2, 2006" }}</span>
+    </li>
+    {{ end }}
+</ul>
+
+<script>
+let sortAZ = false;
+let currentTag = '';
+
+function toggleSort() {
+    sortAZ = !sortAZ;
+    const list = document.getElementById('pageList');
+    const items = Array.from(list.children);
+    items.sort((a, b) => {
+        if (sortAZ) return a.dataset.title.localeCompare(b.dataset.title);
+        return b.dataset.date.localeCompare(a.dataset.date);
+    });
+    items.forEach(i => list.appendChild(i));
+    document.getElementById('sortBtn').textContent = sortAZ ? 'Date' : 'A-Z';
+}
+
+function toggleView() {
+    const list = document.getElementById('pageList');
+    list.classList.toggle('grid-view');
+    document.getElementById('viewBtn').textContent = list.classList.contains('grid-view') ? 'List' : 'Grid';
+}
+
+function filterTag(btn, tag) {
+    currentTag = tag;
+    document.querySelectorAll('.filter-pill').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.querySelectorAll('.page-item').forEach(item => {
+        if (!tag) { item.style.display = ''; return; }
+        const tags = (item.dataset.tags || '').split(',');
+        item.style.display = tags.includes(tag) ? '' : 'none';
+    });
+}
+</script>
+{{ end }}

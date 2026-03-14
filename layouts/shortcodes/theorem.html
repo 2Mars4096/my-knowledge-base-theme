@@ -1,0 +1,11 @@
+{{ $type := "theorem" }}
+{{ $title := .Get 0 }}
+{{ if in (slice "definition" "lemma" "proposition" "corollary" "remark" "assumption") (.Get 0) }}
+    {{ $type = .Get 0 }}
+    {{ $title = .Get 1 }}
+{{ end }}
+{{ $label := $type | title }}
+<div class="math-block math-block--{{ $type }}">
+    <div class="math-block__label">{{ $label }}{{ with $title }} ({{ . }}){{ end }}.</div>
+    {{ .Inner | markdownify }}
+</div>

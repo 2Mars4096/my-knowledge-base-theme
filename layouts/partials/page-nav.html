@@ -1,0 +1,16 @@
+<nav class="page-nav">
+    <div class="page-nav__back">
+        <a href="../">&#8593; Back</a>
+    </div>
+    <div class="page-nav__title">
+        <h1>{{ .Title }}</h1>
+    </div>
+    <div class="page-nav__siblings">
+        {{ with .PrevInSection }}
+        <a href="{{ .RelPermalink }}">&#8592;&nbsp;Prev</a>
+        {{ end }}
+        {{ with .NextInSection }}
+        <a href="{{ .RelPermalink }}">Next&nbsp;&#8594;</a>
+        {{ end }}
+    </div>
+</nav>

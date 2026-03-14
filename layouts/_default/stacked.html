@@ -1,0 +1,139 @@
+{{ define "main" }}
+
+{{ partial "page-nav.html" . }}
+
+<div class="three-col">
+    <!-- Left column: Table of Contents -->
+    <aside class="toc-sidebar">
+        <h3>Contents</h3>
+        <ul id="toc">
+            <!-- TOC populated by JavaScript -->
+        </ul>
+    </aside>
+
+    <!-- Middle column: Content -->
+    <article id="main-content" class="content-area">
+        {{ if .IsSection }}
+            {{ range .Pages }}
+                {{ if eq .Name "_index.md" }}
+                    {{ .Content }}
+                {{ end }}
+            {{ end }}
+        {{ end }}
+
+        {{ $pages := where .Pages "Kind" "page" }}
+        {{ range (sort $pages "Title" "asc") }}
+            <div class="section-content">
+                <div class="page-header">
+                    <h2 id="{{ .Title | urlize }}">
+                        <a href="{{ .RelPermalink }}" class="page-title-link">{{ .Title }}</a>
+                    </h2>
+                    <div class="page-meta">
+                        {{ with .Lastmod }}
+                        <span>Last modified: {{ .Format "Jan 2, 2006" }}</span>
+                        {{ end }}
+                    </div>
+                </div>
+                {{ with .Params.subtitle }}
+                <h3 style="color: var(--muted); margin-bottom: var(--space-lg);">{{ . }}</h3>
+                {{ end }}
+
+                <div class="downgraded-content">
+                    {{ .Content }}
+                </div>
+            </div>
+        {{ end }}
+    </article>
+
+    <!-- Right column: Notes -->
+    <aside id="notes" class="notes-sidebar">
+        <h3>Notes</h3>
+        <div id="footnote-container"></div>
+    </aside>
+</div>
+
+<script>
+    function waitForMathJax() {
+        return new Promise((resolve) => {
+            if (window.MathJax) {
+                MathJax.Hub.Queue(() => resolve());
+            } else {
+                resolve();
+            }
+        });
+    }
+
+    window.addEventListener('load', async function() {
+        await waitForMathJax();
+
+        // Downgrade headings in leaf content
+        document.querySelectorAll('.downgraded-content').forEach(content => {
+            for (let i = 5; i >= 1; i--) {
+                content.querySelectorAll('h' + i).forEach(heading => {
+                    const newHeading = document.createElement('h' + (i + 1));
+                    newHeading.innerHTML = heading.innerHTML;
+                    newHeading.id = heading.id;
+                    newHeading.className = heading.className;
+                    heading.parentNode.replaceChild(newHeading, heading);
+                });
+            }
+        });
+
+        // TOC
+        const toc = document.getElementById('toc');
+        const articleContent = document.getElementById('main-content');
+        const headings = articleContent.querySelectorAll('h2, h3, h4');
+        document.documentElement.style.scrollBehavior = 'smooth';
+
+        headings.forEach(function(heading) {
+            if (heading.closest('.Params')) return;
+            if (!heading.id) {
+                heading.id = heading.textContent.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-');
+            }
+            const level = heading.tagName.toLowerCase();
+            const listItem = document.createElement('li');
+            listItem.className = 'toc-item' + (level === 'h3' ? ' toc-h3' : level === 'h4' ? ' toc-h4' : '');
+
+            const link = document.createElement('a');
+            link.href = '#' + heading.id;
+            link.textContent = heading.textContent;
+            link.className = 'toc-link';
+            listItem.appendChild(link);
+            toc.appendChild(listItem);
+            progressiveLoadObserver.observe(listItem);
+        });
+
+        // Hide empty sections
+        if (!toc.hasChildNodes()) toc.closest('aside').style.display = 'none';
+        const footnoteContainer = document.getElementById('footnote-container');
+        const notesAside = footnoteContainer?.closest('aside');
+        if (footnoteContainer && !footnoteContainer.hasChildNodes() && notesAside) {
+            notesAside.style.display = 'none';
+            document.querySelector('.content-area')?.classList.add('expanded');
+        }
+
+        // Scroll-based TOC highlight
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    toc.querySelectorAll('.toc-link').forEach(a => a.classList.remove('active'));
+                    const link = toc.querySelector('a[href="#' + entry.target.id + '"]');
+                    if (link) link.classList.add('active');
+                }
+            });
+        }, { threshold: 0.1 });
+        headings.forEach(h => observer.observe(h));
+    });
+
+    // Progressive load observer (shared with single.html pattern)
+    const progressiveLoadObserver = new IntersectionObserver((entries, obs) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.classList.add('visible');
+                obs.unobserve(entry.target);
+            }
+        });
+    }, { rootMargin: '0px', threshold: 0.1 });
+</script>
+
+{{ end }}

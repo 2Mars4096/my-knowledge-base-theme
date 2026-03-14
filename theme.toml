@@ -1,0 +1,11 @@
+name = "Knowledge Base"
+license = "MIT"
+licenselink = "https://github.com/2Mars4096/my-knowledge-base-theme/blob/main/LICENSE"
+description = "A Hugo theme for academic knowledge management with bidirectional citations, BibTeX support, and rich shortcodes."
+homepage = "https://github.com/2Mars4096/my-knowledge-base-theme"
+min_version = "0.110.0"
+tags = ["academic", "knowledge-base", "citations", "bibtex", "notes", "papers", "math"]
+
+[author]
+  name = "2Mars4096"
+  homepage = "https://github.com/2Mars4096"

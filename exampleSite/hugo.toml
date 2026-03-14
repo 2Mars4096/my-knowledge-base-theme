@@ -1,0 +1,59 @@
+baseURL = "http://example.org/"
+languageCode = "en-us"
+title = "My Knowledge Base"
+theme = "my-knowledge-base-theme"
+
+# ---------------------------------------------------------------------------
+# Theme parameters — all optional, shown here with their defaults
+# ---------------------------------------------------------------------------
+[params]
+  # Navigation: which sections appear in the top nav bar, in order.
+  # Each entry must match a top-level directory under content/.
+  navSections = ["papers", "notes", "log", "to-do", "blogs"]
+
+  # Homepage: how many recent items to show on the dashboard.
+  recentItems = 20
+
+  # Citations: enable "Cited By" backlinks on pages that have a pageID.
+  enableBackwardCitations = true
+
+  # Citation sections: which sections are scanned for @pageID citations.
+  citationSections = ["papers", "notes", "blogs", "log", "to-do"]
+
+# ---------------------------------------------------------------------------
+# Outputs — JSON needed for the search index
+# ---------------------------------------------------------------------------
+[outputs]
+  home = ["HTML", "JSON"]
+
+# ---------------------------------------------------------------------------
+# Front-matter date handling
+# ---------------------------------------------------------------------------
+[frontmatter]
+  date = ['date', ':default']
+  lastmod = ['lastmod', ':fileModTime', ':default']
+
+# ---------------------------------------------------------------------------
+# Taxonomies
+# ---------------------------------------------------------------------------
+[taxonomies]
+  tag = "tags"
+
+# ---------------------------------------------------------------------------
+# Markdown / Goldmark
+# ---------------------------------------------------------------------------
+[markup]
+  defaultMarkdownHandler = 'goldmark'
+  [markup.goldmark]
+    [markup.goldmark.renderer]
+      unsafe = true
+    [markup.goldmark.extensions]
+      footnote = true
+    [markup.goldmark.extensions.passthrough]
+      enable = true
+      [markup.goldmark.extensions.passthrough.delimiters]
+        block = [['$$', '$$'], ['\[', '\]']]
+        inline = [['$', '$'], ['\(', '\)']]
+  [markup.highlight]
+    noClasses = false
+    style = "monokai"

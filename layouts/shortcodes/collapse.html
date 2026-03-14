@@ -1,0 +1,15 @@
+<div class="collapse-wrapper">
+    <div class="collapse-header" onclick="toggleCollapse(this);">
+        <span class="collapse-toggle">▶</span>
+        <span>{{ .Get 0 }}</span>
+    </div>
+    <div class="hidden expanded-content">
+        {{ .Inner | markdownify }}
+    </div>
+</div>
+<script>
+    function toggleCollapse(header) {
+        header.querySelector('.collapse-toggle').classList.toggle('expanded');
+        header.nextElementSibling.classList.toggle('hidden');
+    }
+</script>

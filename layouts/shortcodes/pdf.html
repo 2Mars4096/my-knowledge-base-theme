@@ -1,0 +1,13 @@
+{{ $src := .Get 0 }}
+{{ $height := .Get 1 | default "800px" }}
+<div class="pdf-container">
+    {{ with $.Page.Resources.GetMatch $src }}
+    <iframe src="{{ .RelPermalink }}#view=FitH" width="100%" height="{{ $height }}" allowfullscreen>
+        <p>Your browser doesn't support iframes. <a href="{{ .RelPermalink }}">Download the PDF</a>.</p>
+    </iframe>
+    {{ else }}
+    <iframe src="{{ $src }}#view=FitH" width="100%" height="{{ $height }}" allowfullscreen>
+        <p>Your browser doesn't support iframes. <a href="{{ $src }}">Download the PDF</a>.</p>
+    </iframe>
+    {{ end }}
+</div>

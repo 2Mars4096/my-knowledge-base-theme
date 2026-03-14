@@ -1,0 +1,158 @@
+#!/bin/bash
+# Quick content creation for the knowledge base.
+# Usage:
+#   ./new note "Topology Basics"         -> content/notes/topology-basics/index.md
+#   ./new paper smith2024widgets          -> content/papers/smith2024widgets/index.md
+#   ./new log                            -> content/log/YYYY-MM-DD/index.md
+#   ./new log "Custom title"             -> content/log/YYYY-MM-DD/index.md with custom title
+#   ./new blog "Investment Ideas Q1"     -> content/blogs/investment-ideas-q1/index.md
+# Short aliases: n, p, l, b
+
+set -e
+cd "$(dirname "$0")"
+
+TYPE="$1"
+TITLE="$2"
+DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+TODAY=$(date +"%Y-%m-%d")
+AUTHOR="Your Name"
+
+slugify() {
+    echo "$1" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/-/g' | sed 's/--*/-/g' | sed 's/^-//' | sed 's/-$//'
+}
+
+open_in_editor() {
+    if command -v cursor &>/dev/null; then
+        cursor "$1"
+    elif command -v code &>/dev/null; then
+        code "$1"
+    else
+        echo "Open: $1"
+    fi
+}
+
+case "$TYPE" in
+    note|n)
+        [ -z "$TITLE" ] && echo "Usage: ./new note \"Title\"" && exit 1
+        SLUG=$(slugify "$TITLE")
+        DIR="content/notes/$SLUG"
+        [ -d "$DIR" ] && echo "Already exists: $DIR" && exit 1
+        mkdir -p "$DIR"
+        cat > "$DIR/index.md" << EOF
+---
+title: "$TITLE"
+subtitle: ""
+date: $DATE
+draft: false
+abstract: ""
+pageID: "notes-$SLUG"
+tags: []
+---
+EOF
+        echo "Created: $DIR/index.md"
+        open_in_editor "$DIR/index.md"
+        ;;
+
+    paper|p)
+        [ -z "$TITLE" ] && echo "Usage: ./new paper citationKey" && exit 1
+        SLUG="$TITLE"
+        DIR="content/papers/$SLUG"
+        [ -d "$DIR" ] && echo "Already exists: $DIR" && exit 1
+        mkdir -p "$DIR"
+        cat > "$DIR/index.md" << EOF
+---
+title: ""
+subtitle: ""
+date: $DATE
+draft: false
+abstract: ""
+link: ""
+pageID: "$SLUG"
+bibtex: >
+    @article{$SLUG,
+    title={},
+    author={},
+    journal={},
+    year={},
+    }
+tags: []
+---
+
+{{< paperPDF filename="$SLUG.pdf" height="800px" >}}
+
+## Takeaways
+
+## Q&A
+EOF
+        echo "Created: $DIR/index.md"
+        open_in_editor "$DIR/index.md"
+        ;;
+
+    log|l)
+        SLUG="$TODAY"
+        DIR="content/log/$SLUG"
+        LOG_TITLE="${TITLE:-Log $TODAY}"
+        if [ -d "$DIR" ]; then
+            echo "Today's log already exists: $DIR/index.md"
+            open_in_editor "$DIR/index.md"
+            exit 0
+        fi
+        mkdir -p "$DIR"
+        cat > "$DIR/index.md" << EOF
+---
+title: "$LOG_TITLE"
+date: $DATE
+draft: false
+author: $AUTHOR
+pageID: "log-$TODAY"
+tags: []
+---
+
+## Reflections
+
+
+## Tasks
+- [ ] 
+
+## Reading Notes
+
+EOF
+        echo "Created: $DIR/index.md"
+        open_in_editor "$DIR/index.md"
+        ;;
+
+    blog|b)
+        [ -z "$TITLE" ] && echo "Usage: ./new blog \"Title\"" && exit 1
+        SLUG=$(slugify "$TITLE")
+        DIR="content/blogs/$SLUG"
+        [ -d "$DIR" ] && echo "Already exists: $DIR" && exit 1
+        mkdir -p "$DIR"
+        cat > "$DIR/index.md" << EOF
+---
+title: "$TITLE"
+subtitle: ""
+author: "$AUTHOR"
+date: $DATE
+draft: false
+abstract: ""
+figure: ""
+pageID: "blogs-$SLUG"
+tags: []
+---
+EOF
+        echo "Created: $DIR/index.md"
+        open_in_editor "$DIR/index.md"
+        ;;
+
+    *)
+        echo "Usage: ./new <type> [title]"
+        echo ""
+        echo "Types:"
+        echo "  note  (n)   ./new note \"Topology Basics\""
+        echo "  paper (p)   ./new paper smith2024widgets"
+        echo "  log   (l)   ./new log                         (today's date)"
+        echo "  log   (l)   ./new log \"Custom title\"          (today + title)"
+        echo "  blog  (b)   ./new blog \"Investment Ideas Q1\""
+        exit 1
+        ;;
+esac
