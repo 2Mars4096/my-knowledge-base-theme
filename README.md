@@ -5,6 +5,32 @@ A Hugo theme designed for academic knowledge management — papers, notes, blogs
 ![Hugo](https://img.shields.io/badge/Hugo-%3E%3D0.110-ff4088?logo=hugo)
 ![License](https://img.shields.io/badge/License-MIT-blue)
 
+## Screenshots
+
+**Homepage** — dashboard with recent activity, section links, and tag cloud:
+
+![Homepage](screenshots/homepage.png)
+
+**Papers list** — search, filter by year/journal/tag, multiple sort modes:
+
+![Papers list](screenshots/papers-list.png)
+
+**Paper page** — embedded PDF viewer with BibTeX metadata:
+
+![Paper page](screenshots/paper-page.png)
+
+**Callouts** — five styled callout types (note, tip, warning, important, example):
+
+![Callouts](screenshots/shortcodes-callouts.png)
+
+**Math blocks** — theorem, definition, lemma with rendered LaTeX:
+
+![Math blocks](screenshots/shortcodes-math.png)
+
+**Stacked layout** — nested notes rendered inline on one page (see [Layouts](#layouts)):
+
+![Stacked layout](screenshots/stacked-math.png)
+
 ## Features
 
 - **Bidirectional citations**: Type `@pageID` to cite any page. Auto-formatted in APA style with a generated References section. Cited pages show "Cited By" backlinks.
