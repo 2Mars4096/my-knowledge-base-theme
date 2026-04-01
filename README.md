@@ -1,6 +1,6 @@
 # Knowledge Base Theme for Hugo
 
-A Hugo theme designed for academic knowledge management — papers, notes, blogs, and daily logs — with a bidirectional citation system, BibTeX integration, and rich shortcodes for math, diagrams, and more.
+A Hugo theme for academic knowledge management — papers, notes, blogs, and daily logs — with a bidirectional citation system, interactive knowledge graph, full-text fuzzy search, and rich shortcodes for math, diagrams, and more.
 
 ![Hugo](https://img.shields.io/badge/Hugo-%3E%3D0.110-ff4088?logo=hugo)
 ![License](https://img.shields.io/badge/License-MIT-blue)
@@ -11,35 +11,53 @@ A Hugo theme designed for academic knowledge management — papers, notes, blogs
 
 ![Homepage](screenshots/homepage.png)
 
+**Knowledge Graph** — interactive D3.js force-directed graph of citation relationships across all content:
+
+![Knowledge Graph](screenshots/graph.png)
+
+**Full-text Search** — fuzzy search overlay (`⌘K`) with content snippets and tag pills:
+
+![Search](screenshots/search.png)
+
 **Papers list** — search, filter by year/journal/tag, multiple sort modes:
 
 ![Papers list](screenshots/papers-list.png)
 
-**Paper page** — embedded PDF viewer with BibTeX metadata:
+**Papers table** — sortable columns for title, authors, year, journal, tags:
+
+![Papers table](screenshots/papers-table.png)
+
+**Paper page** — three-column layout with TOC, rendered math, and margin notes:
 
 ![Paper page](screenshots/paper-page.png)
+
+**Citations & backlinks** — inline APA-formatted citations, auto-generated References, and "Cited By" backlinks with context snippets:
+
+![Citations](screenshots/citations.png)
 
 **Callouts** — five styled callout types (note, tip, warning, important, example):
 
 ![Callouts](screenshots/shortcodes-callouts.png)
 
-**Math blocks** — theorem, definition, lemma with rendered LaTeX:
+**Math blocks** — theorem, definition, lemma, proposition, corollary with rendered LaTeX:
 
 ![Math blocks](screenshots/shortcodes-math.png)
 
-**Stacked layout** — nested notes rendered inline on one page (see [Layouts](#layouts)):
+**Stacked layout** — nested notes rendered inline on one page:
 
 ![Stacked layout](screenshots/stacked-math.png)
 
 ## Features
 
-- **Bidirectional citations**: Type `@pageID` to cite any page. Auto-formatted in APA style with a generated References section. Cited pages show "Cited By" backlinks.
+- **Interactive knowledge graph**: D3.js force-directed graph visualizing citation relationships across all content. Nodes colored by section type, sized by connection count. Filter by section, search, toggle labels and orphans.
+- **Full-text fuzzy search**: Press `⌘K` to open the search overlay. Powered by Fuse.js with weighted matching across title, tags, content, and citation IDs. Results include content snippets and tag pills.
+- **Bidirectional citations**: Type `@pageID` to cite any page. Auto-formatted in APA style with a generated References section. Cited pages show "Cited By" backlinks with context snippets.
 - **BibTeX support**: Store BibTeX entries in front matter. Export `.bib` files for your manuscripts with the included script.
-- **Paper management**: Dedicated papers list with search, filtering by year/journal/tag, and multiple sort modes.
+- **Papers dashboard**: Dedicated papers section with search, filtering by year/journal/tag, five sort modes, and three view modes (List, Grid, Table).
+- **Summary transclusion**: Embed abstracts from other pages inline with `{{</* summary "pageID" */>}}`.
 - **Math rendering**: MathJax with common macros (configurable). Supports inline `$...$` and display `$$...$$` math.
 - **Rich shortcodes**: Theorems, proofs, callouts, collapsible sections, Plotly charts, Mermaid diagrams, figures, PDFs, and videos.
 - **Three-column layout**: Auto-generated TOC (left), content (center), and margin notes (right). Responsive on mobile.
-- **Full-text search**: Client-side search overlay with `⌘K` keyboard shortcut.
 - **PDF export**: One-click export to a print-friendly PDF from any page.
 - **Tag system**: Tag any page, filter by tags, browse the tag cloud.
 - **Content creation CLI**: `./new paper`, `./new note`, `./new blog`, `./new log` to scaffold content with correct front matter.
@@ -64,6 +82,8 @@ hugo server -D
 
 Then open [http://localhost:1313](http://localhost:1313).
 
+The example site includes 8 interconnected papers, 8 study notes, 4 blog posts, a daily log, and a to-do list — enough to demonstrate the knowledge graph, citation system, and all shortcodes.
+
 ## Content Types
 
 | Type | Create with | Description |
@@ -73,6 +93,80 @@ Then open [http://localhost:1313](http://localhost:1313).
 | **Blog** | `./new blog "Title"` | Long-form writing and analysis |
 | **Log** | `./new log` | Daily journal with reflections, tasks, and reading notes |
 | **To-Do** | Create manually | Weekly task lists |
+
+## Knowledge Graph
+
+Access via the **Graph** button in the top navigation bar.
+
+The graph page visualizes all citation relationships across your knowledge base as an interactive D3.js force-directed graph. Hugo collects page metadata and `@pageID` citations at build time; JavaScript handles edge validation, force simulation, and rendering.
+
+**Controls:**
+- **Section filter** — show only papers, notes, blogs, etc.
+- **Search** — filter nodes by title or ID
+- **Labels** — toggle node labels on/off
+- **Orphans** — show/hide unconnected nodes
+
+**Interaction:**
+- **Hover** a node to highlight its neighbors and dim the rest
+- **Click** a node to navigate to that page
+- **Drag** nodes to rearrange the layout
+- **Scroll** to zoom in/out
+
+Nodes are colored by section type (papers, notes, blogs, log, to-do) and sized proportionally to their connection count. Edges represent `@pageID` citations.
+
+## Full-Text Fuzzy Search
+
+Press `⌘K` (or `Ctrl+K`) to open the search overlay. Powered by Fuse.js with weighted fuzzy matching across:
+
+- **Title** (highest weight)
+- **Tags**
+- **Content** (500-char excerpt)
+- **Citation ID** (`pageID`)
+
+Results display with content snippets, tag pills, and dates. Navigate results with arrow keys, press Enter to open.
+
+## Citation System
+
+### Forward Citations
+
+Type `@pageID` anywhere in your content:
+
+```markdown
+This result builds on @smith2024widgets and extends the framework of @doe2023logistics.
+```
+
+The theme will:
+1. Look up the page with matching `pageID` in front matter
+2. Parse BibTeX to extract authors and year
+3. Render inline as "Smith et al. (2024)" with a link
+4. Auto-generate a References section at the bottom of the page
+
+### Backward Citations
+
+Every page with a `pageID` automatically shows a "Cited By" section listing all pages that reference it, with context snippets. Disable per-page with `backwardCitation: false` in front matter, or globally with `enableBackwardCitations = false`.
+
+### Summary Transclusion
+
+Embed another page's abstract inline:
+
+```markdown
+{{</* summary "acemoglu2012network" */>}}
+```
+
+Renders the target page's `abstract` field (from front matter) as a styled blockquote with a link to the full page.
+
+### BibTeX Export
+
+```bash
+# Export all papers to references.bib
+python scripts/export_bib.py
+
+# Export specific papers
+python scripts/export_bib.py --ids "smith2024widgets,doe2023logistics"
+
+# Export papers cited in a LaTeX manuscript
+python scripts/export_bib.py --from-tex ~/paper/main.tex
+```
 
 ## Configuration
 
@@ -117,38 +211,23 @@ Edit the CSS custom properties in `static/css/styles.css` under `:root`:
 }
 ```
 
-## Citation System
+## Papers Dashboard
 
-### Forward Citations
+The papers section (`/papers/`) provides an advanced interface for managing your paper library.
 
-Type `@pageID` anywhere in your content:
+**Search:** Full-text search across title, author, journal, year, and BibTeX ID.
 
-```markdown
-This result builds on @smith2024widgets and extends the framework of @doe2023logistics.
-```
+**Filters:**
+- **Year pills** — extracted from BibTeX, click to filter
+- **Journal pills** — extracted from BibTeX
+- **Tag pills** — filter by topic tags
 
-The theme will:
-1. Look up the page with matching `pageID` in front matter
-2. Parse BibTeX to extract authors and year
-3. Render inline as "Smith et al. (2024)" with a link
-4. Auto-generate a References section at the bottom of the page
+**Sort modes:** Date Added, Year (New→Old), Year (Old→New), Author A–Z, Title A–Z
 
-### Backward Citations
-
-Every page with a `pageID` automatically shows a "Cited By" section listing all pages that reference it, with context snippets. Disable per-page with `backwardCitation: false` in front matter, or globally with `enableBackwardCitations = false`.
-
-### BibTeX Export
-
-```bash
-# Export all papers to references.bib
-python scripts/export_bib.py
-
-# Export specific papers
-python scripts/export_bib.py --ids "smith2024widgets,doe2023logistics"
-
-# Export papers cited in a LaTeX manuscript
-python scripts/export_bib.py --from-tex ~/paper/main.tex
-```
+**View modes:**
+- **List** (default) — card-style entries with metadata
+- **Grid** — compact card grid
+- **Table** — sortable columns (click headers to sort)
 
 ## Layouts
 
@@ -194,6 +273,7 @@ Enhanced list view with:
 - **Journal filter pills** (extracted from BibTeX)
 - **Tag filter pills**
 - **Five sort modes**: Date Added, Year (New→Old), Year (Old→New), Author A–Z, Title A–Z
+- **Three view modes**: List, Grid, Table
 
 ### Homepage (`index.html`) — dashboard
 
@@ -211,6 +291,11 @@ content/notes/
 │   ├── _index.md                      # layout: stacked → inline child pages
 │   ├── linear-algebra/index.md        # child page (rendered inline)
 │   └── probability/index.md           # child page (rendered inline)
+├── economics/
+│   ├── _index.md                      # layout: stacked → inline child pages
+│   ├── network-economics/index.md     # child page (rendered inline)
+│   ├── game-theory/index.md           # child page (rendered inline)
+│   └── optimization-methods/index.md  # child page (rendered inline)
 └── programming/
     ├── _index.md                      # layout: list → card list of children
     ├── python-basics/index.md         # child page (listed as card)
@@ -219,6 +304,7 @@ content/notes/
 
 - `/notes/` shows a flat list of everything (including nested children)
 - `/notes/math/` shows linear algebra and probability content stacked on one page
+- `/notes/economics/` shows network economics, game theory, and optimization stacked
 - `/notes/programming/` shows a card list linking to each child page
 - `/notes/programming/python-basics/` renders as a standalone single page
 
@@ -275,6 +361,14 @@ The proof follows from... ∎
 ```
 
 Renders with italic "Proof." label and a right-aligned QED square (■).
+
+### Summary Transclusion
+
+```markdown
+{{</* summary "pageID" */>}}
+```
+
+Pulls in the `abstract` from the referenced page's front matter and renders it as a styled blockquote with a link.
 
 ### Collapsible Sections
 
@@ -390,6 +484,7 @@ my-knowledge-base/
 ├── hugo.toml                 # Site configuration
 ├── new                       # Content creation CLI
 ├── content/
+│   ├── graph.md              # Knowledge graph page
 │   ├── papers/               # Paper summaries with BibTeX
 │   │   └── smith2024/index.md
 │   ├── notes/                # Study notes and guides
