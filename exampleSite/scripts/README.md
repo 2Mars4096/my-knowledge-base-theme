@@ -14,7 +14,7 @@ python scripts/export_bib.py
 python scripts/export_bib.py --ids "smith2024widgets,doe2023logistics"
 
 # Filter by tags
-python scripts/export_bib.py --tags "networks,supply-chain"
+python scripts/export_bib.py --tags "networks,production-networks"
 
 # Extract only papers cited in a LaTeX manuscript
 python scripts/export_bib.py --from-tex ~/Projects/my-paper/main.tex

@@ -5,7 +5,7 @@ export_bib.py — Extract BibTeX entries from paper frontmatter.
 Usage:
     python scripts/export_bib.py                               # all papers → references.bib
     python scripts/export_bib.py --ids "id1,id2,id3"           # cherry-pick by BibTeX ID
-    python scripts/export_bib.py --tags "networks,supply-chain" # filter by tags
+    python scripts/export_bib.py --tags "networks,production-networks" # filter by tags
     python scripts/export_bib.py --from-tex path/to/main.tex   # extract cited keys from .tex
     python scripts/export_bib.py --out path/to/output.bib      # custom output path
     python scripts/export_bib.py --list                        # list all available IDs
