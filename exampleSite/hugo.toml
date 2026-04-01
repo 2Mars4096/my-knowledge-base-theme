@@ -23,8 +23,14 @@ theme = "my-knowledge-base-theme"
 # ---------------------------------------------------------------------------
 # Outputs — JSON needed for the search index
 # ---------------------------------------------------------------------------
+[outputFormats.citations]
+  baseName = "citations"
+  mediaType = "application/json"
+  isPlainText = true
+  notAlternative = true
+
 [outputs]
-  home = ["HTML", "JSON"]
+  home = ["HTML", "JSON", "citations"]
 
 # ---------------------------------------------------------------------------
 # Front-matter date handling
