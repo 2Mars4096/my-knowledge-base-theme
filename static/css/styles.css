@@ -1824,3 +1824,37 @@ figcaption {
   color: var(--muted);
   white-space: nowrap;
 }
+
+/* ============================================================
+   Summary Transclusion Shortcode
+   ============================================================ */
+
+.summary-transclusion {
+  border-left: 3px solid var(--accent);
+  background: var(--surface);
+  border-radius: 0 6px 6px 0;
+  padding: var(--space-md) var(--space-lg);
+  margin: var(--space-md) 0;
+}
+
+.summary-transclusion__header {
+  margin-bottom: var(--space-sm);
+}
+
+.summary-transclusion__header a {
+  font-weight: 600;
+}
+
+.summary-transclusion__sub {
+  color: var(--muted);
+  font-size: var(--font-size-sm);
+}
+
+.summary-transclusion p:last-child {
+  margin-bottom: 0;
+}
+
+.summary-transclusion--missing {
+  color: var(--callout-warning);
+  font-size: var(--font-size-sm);
+}

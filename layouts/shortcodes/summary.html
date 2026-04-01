@@ -1,0 +1,18 @@
+{{- $pageID := .Get 0 -}}
+{{- $pages := where site.RegularPages "Params.pageID" $pageID -}}
+{{- if $pages -}}
+{{- $p := index $pages 0 -}}
+<blockquote class="summary-transclusion">
+    <div class="summary-transclusion__header">
+        <a href="{{ $p.RelPermalink }}">{{ $p.Title }}</a>
+        {{- with $p.Params.subtitle }} <span class="summary-transclusion__sub">— {{ . }}</span>{{ end -}}
+    </div>
+    {{- if $p.Params.abstract -}}
+        <p>{{ $p.Params.abstract }}</p>
+    {{- else -}}
+        {{ $p.Summary }}
+    {{- end -}}
+</blockquote>
+{{- else -}}
+<span class="summary-transclusion--missing">[Summary not found: {{ $pageID }}]</span>
+{{- end -}}
