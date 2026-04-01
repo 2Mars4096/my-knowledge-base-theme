@@ -1627,3 +1627,115 @@ figcaption {
   outline: 2px solid var(--accent);
   outline-offset: -2px;
 }
+
+/* ============================================================
+   Knowledge Graph Page
+   ============================================================ */
+
+.graph-page {
+  max-width: 100%;
+  padding: 0;
+}
+
+.graph-header {
+  padding: var(--space-sm) var(--space-lg) var(--space-xs);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+}
+
+.graph-header h1 {
+  margin: 0;
+  font-size: var(--font-size-xl);
+  text-align: left;
+  width: 100%;
+}
+
+.graph-controls {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  flex-wrap: wrap;
+}
+
+.graph-select {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: var(--space-xs) var(--space-sm);
+  font-size: var(--font-size-sm);
+  font-family: var(--font-body);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.graph-search-input {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: var(--space-xs) var(--space-sm);
+  font-size: var(--font-size-sm);
+  font-family: var(--font-body);
+  color: var(--text);
+  width: 180px;
+  outline: none;
+}
+
+.graph-search-input:focus {
+  border-color: var(--accent);
+}
+
+.graph-toggle {
+  font-size: var(--font-size-sm);
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.graph-toggle input {
+  cursor: pointer;
+}
+
+.graph-stats {
+  padding: 0 var(--space-lg) var(--space-xs);
+  font-size: var(--font-size-sm);
+  color: var(--muted);
+}
+
+#graph-container {
+  width: 100%;
+  background: var(--bg);
+  border-top: 1px solid var(--border);
+}
+
+#graph-container svg {
+  display: block;
+}
+
+.graph-tooltip {
+  display: none;
+  position: absolute;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: var(--space-sm) var(--space-md);
+  font-size: var(--font-size-sm);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+  pointer-events: none;
+  z-index: 300;
+  max-width: 300px;
+}
+
+.graph-tooltip strong {
+  display: block;
+  margin-bottom: 2px;
+}
+
+.graph-tooltip span {
+  color: var(--muted);
+}

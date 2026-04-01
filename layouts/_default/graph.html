@@ -1,0 +1,203 @@
+{{ define "main" }}
+{{/* Collect nodes and their raw @-citations. JavaScript handles edge validation. */}}
+{{ $nodes := slice }}
+{{ range .Site.RegularPages }}
+    {{ $hasPID := .Params.pageID | default "" }}
+    {{ $cites := slice }}
+    {{ if findRE `@[a-zA-Z]` .RawContent 1 }}
+        {{ $refs := findRE `@[a-zA-Z][a-zA-Z0-9_-]{2,}` .RawContent }}
+        {{ range $refs }}{{ $cites = $cites | append (replaceRE `^@` "" .) }}{{ end }}
+    {{ end }}
+    {{ if or $hasPID $cites }}
+        {{ $id := .Params.pageID | default .RelPermalink }}
+        {{ $nodes = $nodes | append (dict "id" $id "title" .Title "section" .Section "url" .RelPermalink "pid" $hasPID "cites" $cites) }}
+    {{ end }}
+{{ end }}
+
+<div class="graph-page">
+    <div class="graph-header">
+        <h1>{{ .Title }}</h1>
+        <div class="graph-controls">
+            <select id="sectionFilter" class="graph-select">
+                <option value="">All sections</option>
+                <option value="papers">Papers</option>
+                <option value="notes">Notes</option>
+                <option value="blogs">Blogs</option>
+                <option value="log">Log</option>
+            </select>
+            <input type="text" id="graphSearch" class="graph-search-input" placeholder="Filter nodes...">
+            <label class="graph-toggle"><input type="checkbox" id="showLabels" checked> Labels</label>
+            <label class="graph-toggle"><input type="checkbox" id="showOrphans"> Orphans</label>
+        </div>
+    </div>
+    <div class="graph-stats" id="graphStats"></div>
+    <div id="graph-container"></div>
+    <div id="graph-tooltip" class="graph-tooltip"></div>
+</div>
+
+<script id="graph-raw" type="application/json">{{ $nodes | jsonify | safeJS }}</script>
+
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<script>
+(function() {
+    const COLORS = {
+        papers: '#7c3aed', notes: '#0891b2', log: '#ea580c',
+        'to-do': '#16a34a', blogs: '#2563eb', research: '#e11d48'
+    };
+
+    let raw = JSON.parse(document.getElementById('graph-raw').textContent);
+    if (typeof raw === 'string') raw = JSON.parse(raw);
+
+    const pidNodes = new Set();
+    raw.forEach(n => { if (n.pid) pidNodes.add(n.pid); });
+
+    const allNodes = [];
+    const allLinks = [];
+    const edgeSeen = new Set();
+    const addedIds = new Set();
+
+    raw.forEach(n => {
+        let participates = !!n.pid;
+        const validCites = (n.cites || []).filter(t => pidNodes.has(t) && t !== n.id);
+        const unique = [...new Set(validCites)];
+        unique.forEach(t => {
+            const key = n.id + '\u2192' + t;
+            if (!edgeSeen.has(key)) {
+                edgeSeen.add(key);
+                allLinks.push({ source: n.id, target: t });
+                participates = true;
+            }
+        });
+        if (participates && !addedIds.has(n.id)) {
+            addedIds.add(n.id);
+            allNodes.push({ id: n.id, title: n.title, section: n.section, url: n.url, pid: n.pid });
+        }
+    });
+
+    const degree = {};
+    allLinks.forEach(l => {
+        degree[l.source] = (degree[l.source] || 0) + 1;
+        degree[l.target] = (degree[l.target] || 0) + 1;
+    });
+    allNodes.forEach(n => n.degree = degree[n.id] || 0);
+
+    const container = document.getElementById('graph-container');
+    const width = container.clientWidth;
+    const height = Math.max(600, window.innerHeight - container.getBoundingClientRect().top - 20);
+
+    const svg = d3.select('#graph-container')
+        .append('svg').attr('width', width).attr('height', height);
+    const g = svg.append('g');
+    svg.call(d3.zoom().scaleExtent([0.1, 5]).on('zoom', e => g.attr('transform', e.transform)));
+
+    svg.append('defs').append('marker')
+        .attr('id', 'arr').attr('viewBox', '0 -4 8 8')
+        .attr('refX', 20).attr('refY', 0)
+        .attr('markerWidth', 5).attr('markerHeight', 5)
+        .attr('orient', 'auto')
+        .append('path').attr('d', 'M0,-3L7,0L0,3').attr('fill', '#c8c5c0');
+
+    function rad(d) { return Math.max(4, Math.min(16, 4 + (d.degree || 0) * 1.5)); }
+    function col(d) { return COLORS[d.section] || '#78716c'; }
+
+    let sim, linkSel, nodeSel, labelSel;
+
+    function render(nodes, links) {
+        g.selectAll('*').remove();
+        if (!nodes.length) {
+            g.append('text').attr('x', width/2).attr('y', height/2)
+             .attr('text-anchor', 'middle').attr('fill', '#78716c').text('No matching nodes');
+            return;
+        }
+
+        const nodesCopy = nodes.map(n => Object.assign({}, n));
+        const linksCopy = links.map(l => ({ source: l.source, target: l.target }));
+
+        sim = d3.forceSimulation(nodesCopy)
+            .force('link', d3.forceLink(linksCopy).id(d => d.id).distance(90))
+            .force('charge', d3.forceManyBody().strength(-250))
+            .force('center', d3.forceCenter(width/2, height/2))
+            .force('collide', d3.forceCollide().radius(d => rad(d) + 6));
+
+        linkSel = g.append('g').selectAll('line').data(linksCopy).join('line')
+            .attr('stroke', '#d6d3d1').attr('stroke-opacity', 0.5)
+            .attr('stroke-width', 1).attr('marker-end', 'url(#arr)');
+
+        nodeSel = g.append('g').selectAll('circle').data(nodesCopy).join('circle')
+            .attr('r', rad).attr('fill', col)
+            .attr('stroke', '#fff').attr('stroke-width', 1.5)
+            .style('cursor', 'pointer')
+            .call(d3.drag()
+                .on('start', e => { if (!e.active) sim.alphaTarget(0.3).restart(); e.subject.fx = e.subject.x; e.subject.fy = e.subject.y; })
+                .on('drag', e => { e.subject.fx = e.x; e.subject.fy = e.y; })
+                .on('end', e => { if (!e.active) sim.alphaTarget(0); e.subject.fx = null; e.subject.fy = null; })
+            );
+
+        labelSel = g.append('g').selectAll('text').data(nodesCopy).join('text')
+            .text(d => d.title.length > 35 ? d.title.substring(0, 32) + '\u2026' : d.title)
+            .attr('font-size', '9px').attr('fill', '#44403c')
+            .attr('dx', d => rad(d) + 4).attr('dy', '0.35em')
+            .style('pointer-events', 'none')
+            .style('display', document.getElementById('showLabels').checked ? null : 'none');
+
+        const tooltip = d3.select('#graph-tooltip');
+        nodeSel.on('mouseover', function(event, d) {
+            const nb = new Set([d.id]);
+            linksCopy.forEach(l => {
+                const s = typeof l.source === 'object' ? l.source.id : l.source;
+                const t = typeof l.target === 'object' ? l.target.id : l.target;
+                if (s === d.id) nb.add(t); if (t === d.id) nb.add(s);
+            });
+            nodeSel.attr('opacity', n => nb.has(n.id) ? 1 : 0.12);
+            linkSel.attr('stroke-opacity', l => {
+                const s = typeof l.source === 'object' ? l.source.id : l.source;
+                const t = typeof l.target === 'object' ? l.target.id : l.target;
+                return (s === d.id || t === d.id) ? 0.8 : 0.04;
+            });
+            labelSel.attr('opacity', n => nb.has(n.id) ? 1 : 0.08);
+            tooltip.style('display', 'block')
+                .style('left', (event.pageX + 14) + 'px').style('top', (event.pageY - 14) + 'px')
+                .html('<strong>' + d.title + '</strong><br><span>' + d.section + ' \u00b7 ' + (d.degree||0) + ' connections</span>');
+        }).on('mouseout', function() {
+            nodeSel.attr('opacity', 1); linkSel.attr('stroke-opacity', 0.5);
+            labelSel.attr('opacity', 1); tooltip.style('display', 'none');
+        }).on('click', function(event, d) { window.location.href = d.url; });
+
+        sim.on('tick', () => {
+            linkSel.attr('x1', d => d.source.x).attr('y1', d => d.source.y)
+                   .attr('x2', d => d.target.x).attr('y2', d => d.target.y);
+            nodeSel.attr('cx', d => d.x).attr('cy', d => d.y);
+            labelSel.attr('x', d => d.x).attr('y', d => d.y);
+        });
+    }
+
+    function applyFilters() {
+        const section = document.getElementById('sectionFilter').value;
+        const query = document.getElementById('graphSearch').value.toLowerCase().trim();
+        const showOrphans = document.getElementById('showOrphans').checked;
+
+        let nodes = allNodes.filter(n => {
+            if (section && n.section !== section) return false;
+            if (query && !n.title.toLowerCase().includes(query) && !n.id.toLowerCase().includes(query)) return false;
+            if (!showOrphans && n.degree === 0) return false;
+            return true;
+        });
+        const nodeSet = new Set(nodes.map(n => n.id));
+        const links = allLinks.filter(l => nodeSet.has(l.source) && nodeSet.has(l.target));
+
+        document.getElementById('graphStats').textContent =
+            nodes.length + ' nodes \u00b7 ' + links.length + ' edges';
+        render(nodes, links);
+    }
+
+    document.getElementById('sectionFilter').addEventListener('change', applyFilters);
+    document.getElementById('graphSearch').addEventListener('input', applyFilters);
+    document.getElementById('showOrphans').addEventListener('change', applyFilters);
+    document.getElementById('showLabels').addEventListener('change', function() {
+        if (labelSel) labelSel.style('display', this.checked ? null : 'none');
+    });
+
+    applyFilters();
+})();
+</script>
+{{ end }}
