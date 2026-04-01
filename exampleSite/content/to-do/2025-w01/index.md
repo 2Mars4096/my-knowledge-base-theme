@@ -9,8 +9,9 @@ tags: []
 ## Research
 
 - [x] Read @example2024paper and write summary
-- [ ] Search for follow-up papers on the topic
-- [ ] Draft literature review outline
+- [x] Read @acemoglu2012network — foundational network economics paper
+- [ ] Read @nash1950equilibrium and @von1947theory for game theory foundations
+- [ ] Draft literature review outline connecting @notes-network-economics and @notes-game-theory
 
 ## Writing
 

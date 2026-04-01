@@ -3,7 +3,7 @@ title: "On the Dynamics of Widget Production in Closed Economies"
 subtitle: "A theoretical framework for widget optimization"
 date: 2025-01-26T04:24:26Z
 draft: false
-abstract: "This paper develops a model of widget production under capacity constraints, showing that firm-level shocks propagate through supply chains."
+abstract: "This paper develops a model of widget production under capacity constraints, showing that firm-level shocks propagate through production networks."
 link: "https://doi.org/10.1234/example.2024.001"
 pageID: "example2024paper"
 bibtex: >
@@ -17,7 +17,7 @@ bibtex: >
     year={2024},
     publisher={Example Press}
     }
-tags: [supply-chain, optimization, example]
+tags: [production-networks, optimization, example]
 ---
 
 {{< paperPDF filename="example2024paper.pdf" height="800px" >}}
@@ -28,7 +28,7 @@ This is where you summarize the paper's key contributions:
 
 1. Widget production exhibits increasing returns to scale under constraint $\kappa$
 2. The optimal allocation depends on the **network structure** of suppliers
-3. Shocks to a single firm can cascade through the supply chain
+3. Shocks to a single firm can cascade through the production network
 
 ## Model
 
@@ -56,4 +56,4 @@ The paper uses simulated data from a hypothetical 50-firm supply network with ca
 
 ## Related
 
-See also @example-notes-topic for background on the mathematical framework.
+This paper's network model builds on @acemoglu2012network's framework for production networks. See @example-notes-topic for background on graph theory and centrality measures, and @baqaee2019macroeconomic for extensions to nonlinear production functions.

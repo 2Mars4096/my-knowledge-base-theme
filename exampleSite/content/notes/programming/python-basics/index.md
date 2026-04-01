@@ -48,3 +48,7 @@ first_ten = [next(fib) for _ in range(10)]
 ```
 Generators are lazy — they produce values on demand, useful for large or infinite sequences.
 {{< /collapse >}}
+
+## Data Structures
+
+Python's built-in data structures support efficient algorithms. For a deeper dive into trees, heaps, and hash maps, see @notes-data-structures. Python's `dict` uses hash maps internally, providing $O(1)$ average-case lookups.

@@ -59,9 +59,9 @@ $$
 
 ### Cross-References
 
-This blog references the example paper: @example2024paper. It also links to the notes page: @example-notes-topic.
+This blog references the example paper: @example2024paper. It also links to the notes page: @example-notes-topic. For a showcase of how game theory and network economics connect, see @blogs-math-in-economics and @blogs-network-fragility.
 
-Both of these will automatically render as formatted citations with backlinks.
+All of these will automatically render as formatted citations with backlinks.
 
 ## What's Next?
 

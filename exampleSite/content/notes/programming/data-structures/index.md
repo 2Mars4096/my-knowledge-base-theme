@@ -38,3 +38,7 @@ A binary tree is a **BST** if for every node $v$: all keys in the left subtree o
 {{< callout "warning" "Degeneracy" >}}
 An unbalanced BST degenerates to a linked list with $O(n)$ operations. Use self-balancing variants (AVL, Red-Black) for guaranteed $O(\log n)$.
 {{< /callout >}}
+
+## Implementation
+
+For Python implementations of these data structures, see @notes-python-basics. Graph data structures are particularly important in network analysis — the adjacency matrix representation connects to @example-notes-topic and @notes-linear-algebra.

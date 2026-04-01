@@ -253,5 +253,7 @@ Type `@pageID` in any content to cite another page. For example:
 
 - `@example2024paper` renders as a formatted citation → @example2024paper
 - `@example-notes-topic` links to the notes page → @example-notes-topic
+- `@nash1950equilibrium` links to the Nash paper → @nash1950equilibrium
+- `@notes-linear-algebra` links to study notes → @notes-linear-algebra
 
 A **References** section is auto-generated at the bottom of this page. The cited pages also gain a **Cited By** backlink pointing here.

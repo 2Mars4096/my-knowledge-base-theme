@@ -28,3 +28,7 @@ By induction on $n$. The base case $n=1$ is trivial. For the inductive step, let
 {{< callout "tip" "Computational note" >}}
 For large sparse matrices, use iterative methods (Lanczos, Arnoldi) rather than direct diagonalization. Complexity drops from $O(n^3)$ to $O(n \cdot k)$ for the top $k$ eigenvalues.
 {{< /callout >}}
+
+## Applications
+
+Linear algebra appears throughout the sciences. In probability (@notes-probability), covariance matrices are symmetric positive semidefinite — their eigendecomposition reveals the principal components of variation. In network economics, the spectral properties of adjacency matrices determine influence and centrality (see @example-notes-topic). The simplex method in @dantzig1963linear solves linear systems at each pivot step.

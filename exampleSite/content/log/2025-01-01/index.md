@@ -20,4 +20,4 @@ Started setting up the knowledge base today. The bidirectional citation system i
 
 ## Reading Notes
 
-Began reading @example2024paper. Key takeaway: supply chain structure matters for understanding how firm-level shocks propagate.
+Began reading @example2024paper. Key takeaway: production network structure matters for understanding how firm-level shocks propagate. Need to follow up with @acemoglu2012network and @baqaee2019macroeconomic for the theoretical foundations.

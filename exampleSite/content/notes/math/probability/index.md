@@ -52,3 +52,7 @@ The weak LLN requires finite variance. For the strong LLN, finite expectation su
 {{< theorem "remark" "Central Limit Theorem" >}}
 Under the same conditions, $\sqrt{n}(\bar{X}_n - \mu) \xrightarrow{d} \mathcal{N}(0, \sigma^2)$. This is the reason the normal distribution appears so frequently in practice.
 {{< /theorem >}}
+
+## Applications
+
+Probability theory is the language of uncertainty across disciplines. In finance, @markowitz1952portfolio uses the first two moments of return distributions to construct optimal portfolios. In game theory, mixed strategies (@nash1950equilibrium) are probability distributions over actions. The sample covariance matrix connects probability to @notes-linear-algebra via the spectral theorem.
