@@ -1569,3 +1569,61 @@ figcaption {
   }
   .search-trigger kbd { display: none; }
 }
+
+/* ============================================================
+   Graph Trigger (Nav)
+   ============================================================ */
+
+.graph-trigger {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: var(--space-xs) var(--space-md);
+  font-size: var(--font-size-sm);
+  color: var(--muted);
+  text-decoration: none;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.graph-trigger:hover {
+  border-color: var(--muted);
+  color: var(--text);
+  text-decoration: none;
+}
+
+/* ============================================================
+   Search Result Improvements
+   ============================================================ */
+
+.search-result {
+  flex-wrap: wrap;
+}
+
+.search-result__title {
+  flex: 1 1 100%;
+}
+
+.search-result__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  margin-top: 2px;
+}
+
+.search-result__snippet {
+  flex: 1 1 100%;
+  font-size: 0.8rem;
+  color: var(--muted);
+  margin-top: 3px;
+  line-height: 1.4;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.search-result.selected {
+  background: var(--surface);
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
