@@ -1,2 +1,4 @@
 .DS_Store
 **/.DS_Store
+exampleSite/public/
+exampleSite/.hugo_build.lock
