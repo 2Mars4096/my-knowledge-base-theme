@@ -1,0 +1,30 @@
+{{- $entries := slice -}}
+{{- range $page := .Site.RegularPages -}}
+  {{- $pageID := $page.Params.pageID | default "" -}}
+  {{- $bibtex := "" -}}
+  {{- with $page.Params.bibtex -}}
+    {{- $bibtex = . | replaceRE "\n" " " | replaceRE `"` "'" -}}
+  {{- end -}}
+  {{- $cites := slice -}}
+  {{- $raw := $page.RawContent -}}
+  {{- if findRE `@[a-zA-Z]` $raw 1 -}}
+    {{- $refs := findRE `@[a-zA-Z][a-zA-Z0-9_-]{2,}` $raw -}}
+    {{- $seen := slice -}}
+    {{- range $refs -}}
+      {{- $id := replaceRE `^@` "" . -}}
+      {{- if not (in $seen $id) -}}
+        {{- $seen = $seen | append $id -}}
+        {{- $ctx := findRE (printf `.{0,200}@%s.{0,200}` $id) $raw 1 -}}
+        {{- $context := "" -}}
+        {{- with $ctx -}}{{- $context = index . 0 -}}{{- end -}}
+        {{- $cites = $cites | append (dict "id" $id "ctx" $context) -}}
+      {{- end -}}
+    {{- end -}}
+  {{- end -}}
+  {{- if or $pageID $cites -}}
+    {{- $date := "" -}}
+    {{- if not $page.Date.IsZero -}}{{- $date = $page.Date.Format "2006-01-02" -}}{{- end -}}
+    {{- $entries = $entries | append (dict "pid" $pageID "t" $page.Title "u" $page.RelPermalink "bib" $bibtex "s" $page.Section "d" $date "c" $cites) -}}
+  {{- end -}}
+{{- end -}}
+{{- $entries | jsonify -}}

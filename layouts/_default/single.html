@@ -47,41 +47,7 @@
 
         {{ .Content | replaceRE `<h2 id="references">References</h2>\s*<div class="footnotes" role="doc-endnotes">\s*<hr>\s*<ol>[\s\S]*?</ol>\s*</div>` `` | safeHTML }}
 
-        {{ $enableBackCite := .Site.Params.enableBackwardCitations | default true }}
-        {{ if and .Params.pageID (ne .Params.backwardCitation false) $enableBackCite }}
-            {{ $pageID := .Params.pageID }}
-            {{ $citations := slice }}
-            {{ $citeSections := .Site.Params.citationSections | default (slice "papers" "notes" "blogs" "log" "to-do") }}
-
-            {{ range where .Site.RegularPages "Section" "in" $citeSections }}
-                {{ $context := findRE (printf ".{0,200}@%s\\b.{0,200}" $pageID) .RawContent }}
-                {{ if $context }}
-                    {{ $citations = $citations | append (dict
-                        "title" .Title
-                        "link" .RelPermalink
-                        "date" .Date
-                        "context" (index $context 0)
-                    ) }}
-                {{ end }}
-            {{ end }}
-
-            {{ if $citations }}
-                <div class="cited-by">
-                    <h2>Cited By</h2>
-                    <ul>
-                    {{ range sort $citations "date" "desc" }}
-                        <li>
-                            <a href="{{ .link }}">{{ .title }}</a>
-                            <span class="page-meta"> ({{ .date.Format "Jan 2, 2006" }})</span>
-                            {{ with .context }}
-                                <div class="context-snippet">"...{{ . }}..."</div>
-                            {{ end }}
-                        </li>
-                    {{ end }}
-                    </ul>
-                </div>
-            {{ end }}
-        {{ end }}
+        <div id="cited-by-container"></div>
 
         <div id="print-footnotes" class="print-only"></div>
     </article>
@@ -93,6 +59,13 @@
     </aside>
 </div>
 
+<script>
+var __pageData = {
+    pageID: {{ .Params.pageID | default "" | jsonify | safeJS }},
+    showCitedBy: {{ if and .Params.pageID (ne .Params.backwardCitation false) (.Site.Params.enableBackwardCitations | default true) }}true{{ else }}false{{ end }},
+    citeSections: {{ .Site.Params.citationSections | default (slice "papers" "notes" "blogs" "log" "to-do") | jsonify | safeJS }}
+};
+</script>
 <script>
 // --- Lazy loading & progressive loading ---
 const lazyLoadObserver = new IntersectionObserver((entries, observer) => {
@@ -241,7 +214,24 @@ window.addEventListener('load', async function() {
         }
     };
 
-    const initCitations = () => {
+    let _citationsData = null;
+    let _pageMap = null;
+    async function loadCitations() {
+        if (_citationsData) return;
+        try {
+            const resp = await fetch('/citations.json');
+            _citationsData = await resp.json();
+        } catch (e) {
+            _citationsData = [];
+        }
+        _pageMap = {};
+        _citationsData.forEach(function(entry) {
+            if (entry.pid) _pageMap[entry.pid] = entry;
+        });
+    }
+
+    const initCitations = async () => {
+        await loadCitations();
         const content = document.querySelector('#main-content');
         if (!content) return;
         const citationPattern = /@([a-zA-Z0-9_-]+)/g;
@@ -252,10 +242,10 @@ window.addEventListener('load', async function() {
         const uniqueCitations = new Set();
         for (const citation of citations) {
             const pageID = citation.substring(1);
-            const bibtexElement = document.querySelector('[data-pageid="' + pageID + '"]');
-            if (!bibtexElement) continue;
-            const bibtex = bibtexElement.getAttribute('data-bibtex');
-            const pageUrl = bibtexElement.getAttribute('data-url');
+            const entry = _pageMap[pageID];
+            if (!entry) continue;
+            const bibtex = entry.bib;
+            const pageUrl = entry.u;
 
             if (!bibtex) {
                 content.innerHTML = content.innerHTML.replace(
@@ -300,9 +290,9 @@ window.addEventListener('load', async function() {
             referencesList.className = 'references-list';
 
             const references = Array.from(uniqueCitations).map(pageID => {
-                const el = document.querySelector('[data-pageid="' + pageID + '"]');
-                const bibtex = el.getAttribute('data-bibtex');
-                const pageUrl = el.getAttribute('data-url');
+                const entry = _pageMap[pageID];
+                const bibtex = entry.bib;
+                const pageUrl = entry.u;
                 if (!bibtex) return { reference: pageID, pageUrl: pageUrl, sortKey: pageID.toLowerCase() };
                 const authors = bibtex.match(/author={([^}]+)}/)[1].split(' and ');
                 const year = bibtex.match(/year={([^}]+)}/)[1];
@@ -336,11 +326,10 @@ window.addEventListener('load', async function() {
             exportBtn.title = 'Download .bib file for all references on this page';
             exportBtn.addEventListener('click', function() {
                 const bibEntries = Array.from(uniqueCitations).map(function(id) {
-                    const el = document.querySelector('[data-pageid="' + id + '"]');
-                    if (!el) return null;
-                    const raw = el.getAttribute('data-bibtex');
+                    const entry = _pageMap[id];
+                    if (!entry) return null;
+                    const raw = entry.bib;
                     if (!raw) return null;
-                    // Restore single quotes back to double quotes for valid BibTeX
                     return raw.replace(/'/g, '"').trim();
                 }).filter(Boolean).join('\n\n');
                 if (!bibEntries) return;
@@ -358,6 +347,43 @@ window.addEventListener('load', async function() {
 
             content.appendChild(referencesSection);
         }
+    };
+
+    const initCitedBy = async () => {
+        var pd = window.__pageData;
+        if (!pd || !pd.pageID || !pd.showCitedBy) return;
+        await loadCitations();
+        var myID = pd.pageID;
+        var sections = pd.citeSections || [];
+        var citers = [];
+        _citationsData.forEach(function(entry) {
+            if (sections.length && sections.indexOf(entry.s) === -1) return;
+            (entry.c || []).forEach(function(cite) {
+                if (cite.id === myID) {
+                    citers.push({ title: entry.t, url: entry.u, date: entry.d, context: cite.ctx || '' });
+                }
+            });
+        });
+        if (!citers.length) return;
+        citers.sort(function(a, b) { return (b.date || '').localeCompare(a.date || ''); });
+        var container = document.getElementById('cited-by-container');
+        if (!container) return;
+        var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+        function fmtDate(d) {
+            if (!d) return '';
+            var p = d.split('-');
+            return months[parseInt(p[1],10)-1] + ' ' + parseInt(p[2],10) + ', ' + p[0];
+        }
+        function esc(s) { var el = document.createElement('span'); el.textContent = s; return el.innerHTML; }
+        var html = '<div class="cited-by"><h2>Cited By</h2><ul>';
+        citers.forEach(function(c) {
+            html += '<li><a href="' + esc(c.url) + '">' + esc(c.title) + '</a>';
+            html += '<span class="page-meta"> (' + fmtDate(c.date) + ')</span>';
+            if (c.context) html += '<div class="context-snippet">"...' + esc(c.context) + '..."</div>';
+            html += '</li>';
+        });
+        html += '</ul></div>';
+        container.innerHTML = html;
     };
 
     const initScrollHandling = () => {
@@ -388,7 +414,7 @@ window.addEventListener('load', async function() {
     };
 
     initScrollHandling();
-    setTimeout(() => { initFootnotes(); initCitations(); }, 100);
+    setTimeout(function() { initFootnotes(); initCitations(); initCitedBy(); }, 100);
 
     if (window.MathJax) {
         const rerun = () => { initCitations(); };
@@ -602,16 +628,5 @@ function exportPDF() {
     };
 }
 </script>
-
-<!-- Hidden bibtex data for citation processing -->
-{{ range .Site.RegularPages }}
-    {{ if .Params.pageID }}
-        <div hidden
-            data-pageid="{{ .Params.pageID }}"
-            data-bibtex="{{ with .Params.bibtex }}{{ . | replaceRE "\n" " " | replaceRE "\"" "'" }}{{ end }}"
-            data-url="{{ .RelPermalink }}"
-        ></div>
-    {{ end }}
-{{ end }}
 
 {{ end }}
