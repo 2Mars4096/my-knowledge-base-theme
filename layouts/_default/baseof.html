@@ -4,6 +4,26 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script>
+        (function() {
+            try {
+                var params = new URLSearchParams(window.location.search);
+                var isDanPreviewRequest = params.get('dan_preview') === '1';
+                var isEmbeddedSurface = false;
+                try {
+                    isEmbeddedSurface = window.self !== window.top;
+                } catch (_frameError) {
+                    isEmbeddedSurface = true;
+                }
+                if (isDanPreviewRequest && isEmbeddedSurface) {
+                    document.documentElement.dataset.danPreview = '1';
+                    window.__DAN_EMBEDDED_PREVIEW__ = true;
+                }
+            } catch (_error) {
+                // Keep normal site rendering if URL parsing fails.
+            }
+        })();
+    </script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet">

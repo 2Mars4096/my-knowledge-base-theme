@@ -1778,6 +1778,82 @@ figcaption {
   color: var(--accent);
 }
 
+/* ============================================================
+   DAN Embedded Preview Mode
+   ============================================================ */
+
+html[data-dan-preview="1"] .site-nav,
+html[data-dan-preview="1"] .site-footer,
+html[data-dan-preview="1"] .search-overlay,
+html[data-dan-preview="1"] .toc-sidebar,
+html[data-dan-preview="1"] .notes-sidebar,
+html[data-dan-preview="1"] .page-nav__back,
+html[data-dan-preview="1"] .page-nav__siblings,
+html[data-dan-preview="1"] .page-meta,
+html[data-dan-preview="1"] .tag-pills,
+html[data-dan-preview="1"] .edit-source-link,
+html[data-dan-preview="1"] .export-pdf-btn,
+html[data-dan-preview="1"] .export-bib-btn,
+html[data-dan-preview="1"] #print-toc,
+html[data-dan-preview="1"] #print-footnotes,
+html[data-dan-preview="1"] .print-only,
+html[data-dan-preview="1"] .footnotes[role="doc-endnotes"],
+html[data-dan-preview="1"] #footnote-container {
+  display: none !important;
+}
+
+html[data-dan-preview="1"] body {
+  background: var(--bg);
+}
+
+html[data-dan-preview="1"] main {
+  display: block;
+  max-width: none;
+  padding: 0;
+}
+
+html[data-dan-preview="1"] .breadcrumbs {
+  display: none !important;
+}
+
+html[data-dan-preview="1"] .page-nav {
+  align-items: flex-start;
+  gap: 8px;
+  padding: 16px 18px 8px;
+  margin-bottom: 0;
+}
+
+html[data-dan-preview="1"] .page-nav__title {
+  flex: 1 1 auto;
+  min-width: 0;
+  text-align: left;
+}
+
+html[data-dan-preview="1"] .page-nav__title h1 {
+  font-size: clamp(1.55rem, 3.4vw, 2.15rem);
+  line-height: 1.2;
+}
+
+html[data-dan-preview="1"] .three-col {
+  display: block;
+  max-width: none;
+  gap: 0;
+}
+
+html[data-dan-preview="1"] .content-area,
+html[data-dan-preview="1"] .content-area.expanded {
+  display: block !important;
+  flex: none !important;
+  width: auto !important;
+  max-width: none !important;
+  min-width: 0 !important;
+  padding: 0 18px 48px !important;
+}
+
+html[data-dan-preview="1"] #main-content > :first-child {
+  margin-top: 0 !important;
+}
+
 .papers-table__sortable.sorted {
   color: var(--accent);
 }

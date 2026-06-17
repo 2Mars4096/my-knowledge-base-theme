@@ -67,6 +67,612 @@ var __pageData = {
 };
 </script>
 <script>
+(function() {
+const DAN_EMBEDDED_PREVIEW = document.documentElement.dataset.danPreview === '1';
+if (!DAN_EMBEDDED_PREVIEW) return;
+
+const STATE = {
+    inspectMode: false,
+    selectedElement: null,
+    hoverElement: null,
+    reportedIssues: new Set(),
+};
+
+const STYLE_ID = 'dan-preview-inline-bridge-style';
+const ROOT_SELECTORS = [
+    'main article',
+    'article',
+    "[role='main'] article",
+    "[role='main']",
+    'main',
+    '.post-content',
+    '.single-content',
+    '.article-content',
+    '.entry-content',
+    '.content',
+];
+
+function ensureStyles() {
+    if (document.getElementById(STYLE_ID)) return;
+    document.documentElement.dataset.danEmbeddedPreview = 'true';
+    const style = document.createElement('style');
+    style.id = STYLE_ID;
+    style.textContent = `
+        html[data-dan-embedded-preview="true"],
+        html[data-dan-embedded-preview="true"] body {
+            min-height: 100% !important;
+            overflow-y: auto !important;
+        }
+
+        :root[data-dan-preview-inspect="on"] [data-dan-preview-editable="true"] {
+            cursor: text !important;
+        }
+
+        [data-dan-preview-editable-hover="true"] {
+            outline: 2px solid rgba(33, 150, 243, 0.65);
+            outline-offset: 6px;
+            border-radius: 10px;
+        }
+
+        [data-dan-preview-editable-selected="true"] {
+            outline: 3px solid rgba(16, 185, 129, 0.92);
+            outline-offset: 8px;
+            border-radius: 12px;
+            box-shadow: 0 0 0 9999px rgba(15, 23, 42, 0.08);
+        }
+    `;
+    document.head.appendChild(style);
+}
+
+function normalizeText(value) {
+    return String(value || '')
+        .replace(/\u00a0/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+}
+
+function postToHost(channel, payload) {
+    try {
+        window.parent.postMessage(
+            {
+                source: 'dan-preview-guest',
+                channel: channel,
+                payload: payload,
+            },
+            '*',
+        );
+    } catch (_error) {}
+}
+
+function reportRuntimeIssue(message) {
+    const normalized = normalizeText(message);
+    if (!normalized || STATE.reportedIssues.has(normalized)) return;
+    STATE.reportedIssues.add(normalized);
+    postToHost('dan-preview-runtime-issue', { message: normalized });
+}
+
+let EMBEDDED_CITATIONS = null;
+let EMBEDDED_PAGE_MAP = null;
+
+function escapeRegExp(value) {
+    return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+async function loadEmbeddedCitations() {
+    if (EMBEDDED_CITATIONS) return;
+    try {
+        const response = await fetch('/citations.json');
+        EMBEDDED_CITATIONS = await response.json();
+    } catch (_error) {
+        EMBEDDED_CITATIONS = [];
+    }
+
+    EMBEDDED_PAGE_MAP = {};
+    EMBEDDED_CITATIONS.forEach(function(entry) {
+        if (entry.pid) EMBEDDED_PAGE_MAP[entry.pid] = entry;
+    });
+}
+
+function buildEmbeddedReferences(uniqueCitations) {
+    if (!EMBEDDED_PAGE_MAP || uniqueCitations.size === 0) return null;
+
+    const referencesSection = document.createElement('div');
+    referencesSection.className = 'references';
+    referencesSection.innerHTML = '<h2>References</h2>';
+
+    const referencesList = document.createElement('div');
+    referencesList.className = 'references-list';
+
+    const references = Array.from(uniqueCitations).map((pageID) => {
+        const entry = EMBEDDED_PAGE_MAP[pageID];
+        if (!entry) {
+            return {
+                pageUrl: '#',
+                reference: pageID,
+                sortKey: pageID.toLowerCase(),
+            };
+        }
+
+        const bibtex = entry.bib;
+        const pageUrl = entry.u;
+        if (!bibtex) {
+            return {
+                pageUrl: pageUrl,
+                reference: pageID,
+                sortKey: pageID.toLowerCase(),
+            };
+        }
+
+        const authorsMatch = bibtex.match(/author={([^}]+)}/);
+        const yearMatch = bibtex.match(/year={([^}]+)}/);
+        const titleMatch = bibtex.match(/title={([^}]+)}/);
+        if (!authorsMatch || !yearMatch || !titleMatch) {
+            return {
+                pageUrl: pageUrl,
+                reference: pageID,
+                sortKey: pageID.toLowerCase(),
+            };
+        }
+
+        const authors = authorsMatch[1].split(' and ');
+        const formattedAuthors = authors.map(function(author) {
+            const [last, first] = author.split(',').map((part) => part.trim());
+            if (!last || !first) return author.trim();
+            return `${last}, ${first.charAt(0)}.`;
+        }).join(', ');
+
+        const year = yearMatch[1];
+        const title = titleMatch[1];
+        const journal = bibtex.match(/journal={([^}]+)}/)?.[1];
+        const pages = bibtex.match(/pages={([^}]+)}/)?.[1];
+
+        let reference = `${formattedAuthors} (${year}). ${title}`;
+        if (journal) {
+            reference += `. <em>${journal}</em>`;
+            if (pages) reference += `, ${pages}`;
+        }
+        reference += '.';
+
+        return {
+            pageUrl: pageUrl,
+            reference: reference,
+            sortKey: authors[0].split(',')[0].trim().toLowerCase(),
+        };
+    }).sort((left, right) => left.sortKey.localeCompare(right.sortKey));
+
+    references.forEach(function(entry, index) {
+        const refDiv = document.createElement('div');
+        refDiv.style.marginBottom = '1em';
+        refDiv.style.paddingLeft = '2em';
+        refDiv.style.textIndent = '-2em';
+        refDiv.innerHTML =
+            '<span class="reference-index">[' +
+            (index + 1) +
+            ']</span> <a href="' +
+            entry.pageUrl +
+            '" style="text-decoration: none; color: inherit;">' +
+            entry.reference +
+            '</a>';
+        referencesList.appendChild(refDiv);
+    });
+
+    referencesSection.appendChild(referencesList);
+    return referencesSection;
+}
+
+async function initEmbeddedCitations() {
+    const content = document.querySelector('#main-content');
+    if (!content) return;
+    if (content.dataset.danPreviewCitationsApplied === 'true') return;
+
+    const originalHtml = content.innerHTML;
+    const citationPattern = /@([a-zA-Z0-9_-]+)/g;
+    const citations = originalHtml.match(citationPattern);
+    if (!citations) {
+        content.dataset.danPreviewCitationsApplied = 'true';
+        return;
+    }
+
+    await loadEmbeddedCitations();
+    if (!EMBEDDED_PAGE_MAP) {
+        content.dataset.danPreviewCitationsApplied = 'true';
+        return;
+    }
+
+    let nextHtml = originalHtml;
+    const uniqueCitations = new Set();
+
+    citations.forEach(function(citation) {
+        const pageID = citation.substring(1);
+        const entry = EMBEDDED_PAGE_MAP[pageID];
+        if (!entry) return;
+
+        const bibtex = entry.bib;
+        const pageUrl = entry.u;
+        const escapedCitation = escapeRegExp(citation);
+
+        if (!bibtex) {
+            nextHtml = nextHtml.replace(
+                new RegExp(escapedCitation, 'g'),
+                '<a href="' + pageUrl + '" class="citation">' + citation + '</a>',
+            );
+            return;
+        }
+
+        const authorMatch = bibtex.match(/author={([^}]+)}/);
+        const yearMatch = bibtex.match(/year={([^}]+)}/);
+        if (!authorMatch || !yearMatch) {
+            nextHtml = nextHtml.replace(
+                new RegExp(escapedCitation, 'g'),
+                '<a href="' + pageUrl + '" class="citation">' + citation + '</a>',
+            );
+            return;
+        }
+
+        const authors = authorMatch[1].split(' and ');
+        let citationText = '';
+        if (authors.length === 1) {
+            citationText = authors[0].split(',')[0].trim() + ' (' + yearMatch[1] + ')';
+        } else if (authors.length === 2) {
+            citationText =
+                authors[0].split(',')[0].trim() +
+                ' and ' +
+                authors[1].split(',')[0].trim() +
+                ' (' +
+                yearMatch[1] +
+                ')';
+        } else {
+            citationText = authors[0].split(',')[0].trim() + ' et al. (' + yearMatch[1] + ')';
+        }
+
+        nextHtml = nextHtml.replace(
+            new RegExp(escapedCitation, 'g'),
+            '<a href="' + pageUrl + '" class="citation" id="' + pageID + '">' + citationText + '</a>',
+        );
+        uniqueCitations.add(pageID);
+    });
+
+    if (nextHtml !== originalHtml) {
+        content.innerHTML = nextHtml;
+    }
+
+    if (uniqueCitations.size > 0 && !content.querySelector(':scope > .references')) {
+        const referencesSection = buildEmbeddedReferences(uniqueCitations);
+        if (referencesSection) {
+            content.appendChild(referencesSection);
+        }
+    }
+
+    content.dataset.danPreviewCitationsApplied = 'true';
+}
+
+async function initEmbeddedCitedBy() {
+    const pageData = window.__pageData;
+    const container = document.getElementById('cited-by-container');
+    if (!pageData || !container) return;
+    if (container.dataset.danPreviewCitedByApplied === 'true') return;
+    if (!pageData.pageID || !pageData.showCitedBy) {
+        container.dataset.danPreviewCitedByApplied = 'true';
+        return;
+    }
+
+    await loadEmbeddedCitations();
+    if (!Array.isArray(EMBEDDED_CITATIONS) || EMBEDDED_CITATIONS.length === 0) {
+        container.dataset.danPreviewCitedByApplied = 'true';
+        return;
+    }
+
+    const citeSections = Array.isArray(pageData.citeSections)
+        ? pageData.citeSections
+        : [];
+    const myID = pageData.pageID;
+    const citers = [];
+
+    EMBEDDED_CITATIONS.forEach(function(entry) {
+        if (citeSections.length && !citeSections.includes(entry.s)) return;
+        (entry.c || []).forEach(function(cite) {
+            if (cite.id === myID) {
+                citers.push({
+                    context: cite.ctx || '',
+                    date: entry.d,
+                    title: entry.t,
+                    url: entry.u,
+                });
+            }
+        });
+    });
+
+    if (citers.length === 0) {
+        container.dataset.danPreviewCitedByApplied = 'true';
+        return;
+    }
+
+    citers.sort(function(left, right) {
+        return (right.date || '').localeCompare(left.date || '');
+    });
+
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    function formatDate(value) {
+        if (!value) return '';
+        const parts = value.split('-');
+        if (parts.length < 3) return value;
+        const monthIndex = Number.parseInt(parts[1], 10) - 1;
+        const day = Number.parseInt(parts[2], 10);
+        if (monthIndex < 0 || monthIndex >= months.length || Number.isNaN(day)) {
+            return value;
+        }
+        return `${months[monthIndex]} ${day}, ${parts[0]}`;
+    }
+
+    function escapeHtml(value) {
+        const element = document.createElement('span');
+        element.textContent = value;
+        return element.innerHTML;
+    }
+
+    let html = '<div class="cited-by"><h2>Cited By</h2><ul>';
+    citers.forEach(function(citer) {
+        html += '<li><a href="' + escapeHtml(citer.url) + '">' + escapeHtml(citer.title) + '</a>';
+        html += '<span class="page-meta"> (' + formatDate(citer.date) + ')</span>';
+        if (citer.context) {
+            html += '<div class="context-snippet">"...' + escapeHtml(citer.context) + '..."</div>';
+        }
+        html += '</li>';
+    });
+    html += '</ul></div>';
+
+    container.innerHTML = html;
+    container.dataset.danPreviewCitedByApplied = 'true';
+}
+
+function resetPageScroll() {
+    if (window.location.hash) return;
+    try {
+        if ('scrollRestoration' in window.history) {
+            window.history.scrollRestoration = 'manual';
+        }
+        window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+    } catch (_error) {
+        window.scrollTo(0, 0);
+    }
+    document.documentElement.scrollTop = 0;
+    if (document.body) {
+        document.body.scrollTop = 0;
+    }
+}
+
+function getEditableKind(element) {
+    if (!(element instanceof Element)) return null;
+    const tag = element.tagName.toLowerCase();
+    if (/^h[1-6]$/.test(tag)) return 'heading';
+    if (tag === 'li') return 'list_item';
+    if (tag === 'blockquote') return 'blockquote';
+    if (tag === 'p' && !element.closest('blockquote, li')) return 'paragraph';
+    return null;
+}
+
+function collectEditableElements(root) {
+    if (!(root instanceof Element)) return [];
+    return Array.from(root.querySelectorAll('h1, h2, h3, h4, h5, h6, li, blockquote, p'))
+        .filter((element) => {
+            const kind = getEditableKind(element);
+            if (!kind) return false;
+            element.dataset.danPreviewEditable = 'true';
+            return normalizeText(element.innerText || element.textContent || '').length > 0;
+        });
+}
+
+function findContentRoot() {
+    const candidates = ROOT_SELECTORS.flatMap((selector) =>
+        Array.from(document.querySelectorAll(selector)),
+    );
+    let best = null;
+    let bestScore = 0;
+
+    candidates.forEach((candidate) => {
+        const score = collectEditableElements(candidate).length;
+        if (score > bestScore) {
+            best = candidate;
+            bestScore = score;
+        }
+    });
+
+    return bestScore >= 2 ? best : document.body;
+}
+
+function clearHoverElement() {
+    if (!STATE.hoverElement) return;
+    delete STATE.hoverElement.dataset.danPreviewEditableHover;
+    STATE.hoverElement = null;
+}
+
+function clearSelectedElement() {
+    if (!STATE.selectedElement) return;
+    delete STATE.selectedElement.dataset.danPreviewEditableSelected;
+    STATE.selectedElement = null;
+}
+
+function setHoverElement(element) {
+    if (STATE.hoverElement === element) return;
+    clearHoverElement();
+    if (!element) return;
+    element.dataset.danPreviewEditableHover = 'true';
+    STATE.hoverElement = element;
+}
+
+function setSelectedElement(element) {
+    if (STATE.selectedElement === element) return;
+    clearSelectedElement();
+    if (!element) return;
+    element.dataset.danPreviewEditableSelected = 'true';
+    STATE.selectedElement = element;
+}
+
+function resolveEditableTarget(startNode) {
+    const root = findContentRoot();
+    let element = startNode instanceof Element ? startNode : startNode?.parentElement;
+
+    while (element && element !== document.body) {
+        if (root.contains(element)) {
+            const kind = getEditableKind(element);
+            if (kind) {
+                return { element, root, kind };
+            }
+        }
+        element = element.parentElement;
+    }
+
+    return null;
+}
+
+function serializeSelection(element, root, kind) {
+    const editables = collectEditableElements(root);
+    const sameKind = editables.filter((entry) => getEditableKind(entry) === kind);
+    return {
+        kind: kind,
+        text: normalizeText(element.innerText || element.textContent || ''),
+        allIndex: Math.max(editables.indexOf(element), 0),
+        kindIndex: Math.max(sameKind.indexOf(element), 0),
+        tagName: element.tagName,
+    };
+}
+
+function syncInspectMode() {
+    document.documentElement.dataset.danPreviewInspect = STATE.inspectMode
+        ? 'on'
+        : 'off';
+
+    if (!STATE.inspectMode) {
+        clearHoverElement();
+        clearSelectedElement();
+    }
+}
+
+window.addEventListener(
+    'click',
+    function(event) {
+        if (!STATE.inspectMode) return;
+        const resolved = resolveEditableTarget(event.target);
+        if (!resolved) return;
+
+        event.preventDefault();
+        event.stopPropagation();
+        setSelectedElement(resolved.element);
+        postToHost(
+            'dan-preview-selection',
+            serializeSelection(resolved.element, resolved.root, resolved.kind),
+        );
+    },
+    true,
+);
+
+window.addEventListener(
+    'mousemove',
+    function(event) {
+        if (!STATE.inspectMode) return;
+        const resolved = resolveEditableTarget(event.target);
+        setHoverElement(resolved ? resolved.element : null);
+    },
+    true,
+);
+
+window.addEventListener(
+    'keydown',
+    function(event) {
+        if (!STATE.inspectMode || event.key !== 'Escape') return;
+        clearHoverElement();
+        clearSelectedElement();
+        postToHost('dan-preview-selection-cleared', null);
+    },
+    true,
+);
+
+window.addEventListener('message', function(event) {
+    const data = event.data;
+    if (!data || typeof data !== 'object' || data.source !== 'dan-preview-host') {
+        return;
+    }
+
+    if (data.channel === 'dan-preview:set-mode') {
+        const mode = Array.isArray(data.args) ? data.args[0] : null;
+        STATE.inspectMode = Boolean(mode && mode.inspectMode);
+        syncInspectMode();
+        return;
+    }
+
+    if (data.channel === 'dan-preview:clear-selection') {
+        clearHoverElement();
+        clearSelectedElement();
+    }
+});
+
+window.addEventListener(
+    'error',
+    function(event) {
+        const target = event.target;
+        if (
+            target instanceof HTMLScriptElement ||
+            target instanceof HTMLLinkElement ||
+            target instanceof HTMLImageElement
+        ) {
+            const url =
+                target.currentSrc ||
+                target.src ||
+                target.href ||
+                target.getAttribute('src') ||
+                target.getAttribute('href') ||
+                '';
+            const label =
+                target instanceof HTMLScriptElement
+                    ? 'script'
+                    : target instanceof HTMLLinkElement
+                        ? 'stylesheet'
+                        : 'resource';
+            reportRuntimeIssue(`Failed to load ${label}${url ? `: ${url}` : '.'}`);
+            return;
+        }
+
+        if (event.message) {
+            reportRuntimeIssue(event.message);
+        }
+    },
+    true,
+);
+
+window.addEventListener('unhandledrejection', function(event) {
+    const reason =
+        typeof event.reason === 'string'
+            ? event.reason
+            : event.reason && typeof event.reason.message === 'string'
+                ? event.reason.message
+                : null;
+    if (reason) {
+        reportRuntimeIssue(`Unhandled promise rejection: ${reason}`);
+    }
+});
+
+function initializeBridge() {
+    ensureStyles();
+    resetPageScroll();
+    void initEmbeddedCitations().then(() => initEmbeddedCitedBy());
+}
+
+if (document.readyState === 'loading') {
+    window.addEventListener('DOMContentLoaded', initializeBridge, { once: true });
+} else {
+    initializeBridge();
+}
+
+window.addEventListener('load', function() {
+    window.setTimeout(resetPageScroll, 0);
+}, { once: true });
+})();
+</script>
+<script>
+(function() {
+const DAN_EMBEDDED_PREVIEW = document.documentElement.dataset.danPreview === '1';
+if (DAN_EMBEDDED_PREVIEW) return;
+
 // --- Lazy loading & progressive loading ---
 const lazyLoadObserver = new IntersectionObserver((entries, observer) => {
     entries.forEach(entry => {
@@ -627,6 +1233,7 @@ function exportPDF() {
         URL.revokeObjectURL(url);
     };
 }
+})();
 </script>
 
 {{ end }}
