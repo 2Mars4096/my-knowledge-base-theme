@@ -26,6 +26,7 @@
             </span>
             {{ end }}
         </div>
+        <p class="kb-course__continue" hidden></p>
     </header>
 
     <section aria-labelledby="kb-course-chapters">
@@ -49,6 +50,19 @@
             </li>
             {{ end }}
         </ol>
+    </section>
+
+    {{/* Filled by course.js from this browser's saved notes; stays hidden without JavaScript. */}}
+    <section class="kb-course-notes" id="kb-course-notes" aria-labelledby="kb-course-notes-title" hidden>
+        <h2 id="kb-course-notes-title" class="kb-course__section-title">Your notes</h2>
+        <p class="kb-course-notes__count kb-course__hint"></p>
+        <div class="kb-course-notes__actions">
+            <button type="button" class="kb-button kb-course-notes__export" data-action="markdown">Export as Markdown</button>
+            <button type="button" class="kb-button kb-course-notes__export" data-action="backup">Back up notes</button>
+            <button type="button" class="kb-button" data-action="restore">Restore a backup…</button>
+            <input type="file" accept="application/json,.json" hidden>
+        </div>
+        <div class="kb-course-notes__list"></div>
     </section>
 
     <article class="kb-course__about content-area" id="main-content">

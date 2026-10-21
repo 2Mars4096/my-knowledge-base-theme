@@ -273,6 +273,11 @@ Chapter pages are ordinary pages styled by `static/css/course.css` and `static/j
 - `.kb-statement--<kind>` blocks (definition, theorem, proposition, lemma, corollary, proof, common-mistake, assumptions) and `.kb-example` sections
 - exercises anchored with `.kb-exercise-anchor`, each followed by collapsed `details.kb-panel--hint|answer|solution` panels, opened automatically for printing
 - `figure.course-figure` with a caption, scrolling sideways on phones
+- `a.kb-ref` reference links: hover, focus, or tap shows the target (fetched from another chapter when needed, with mathematics typeset), and a "Back to" control returns to the exact spot
+- reading position per chapter ("Continue at" on return; progress and "Continue reading" on the course page) and notes on any anchored block, both kept in the browser's `localStorage`; the course page lists notes and exports them as Markdown or a JSON backup
+- keyboard shortcuts on chapter pages: `j`/`k` sections, `n`/`p` exercises, `[`/`]` chapters, `h`/`a`/`s` panels, `m` note, `?` help
+
+Link `course.css` and `course.js` with a version query (for example the file's modification time) so readers get updates.
 
 ### Papers List (`papers/list.html`) — specialized for papers
 

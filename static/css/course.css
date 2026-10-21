@@ -6,11 +6,8 @@
    Uses the design tokens from styles.css only.
    ============================================================ */
 
-.kb-statement,
-.kb-example,
-.kb-exercise-anchor {
-  scroll-margin-top: calc(var(--nav-height) + var(--space-md));
-}
+/* Anchored blocks land below the sticky header (sites may also set scroll-padding-top on html). */
+html { scroll-padding-top: calc(var(--nav-height) + var(--space-md)); }
 
 /* --- Statement blocks: definitions, theorems, proofs, ... --- */
 
@@ -321,6 +318,311 @@ figure.course-figure {
   .kb-chapter-list a { grid-template-columns: 2rem 1fr; padding: var(--space-md) var(--space-sm); }
 }
 
+/* --- Reference links and previews --- */
+
+a.kb-ref {
+  text-decoration: underline dotted;
+  text-underline-offset: 0.2em;
+  text-decoration-color: color-mix(in srgb, var(--accent) 55%, transparent);
+}
+
+a.kb-ref:hover { text-decoration-style: solid; }
+
+.kb-preview {
+  position: fixed;
+  z-index: 400;
+  width: min(440px, calc(100vw - 24px));
+  max-height: min(60vh, 520px);
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 12px 40px rgb(28 25 23 / 18%);
+  font-size: 0.95rem;
+}
+
+.kb-preview[hidden] { display: none; }
+
+.kb-preview__bar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-xs) var(--space-xs) var(--space-xs) var(--space-md);
+  border-bottom: 1px solid var(--border-light);
+  font-size: var(--font-size-sm);
+}
+
+.kb-preview__title { flex: 1; font-weight: 600; color: var(--text-secondary); }
+.kb-preview__go { font-weight: 600; }
+
+.kb-preview__close {
+  min-width: 32px;
+  min-height: 32px;
+  font-size: 1.2rem;
+  line-height: 1;
+  color: var(--muted);
+  background: none;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.kb-preview__close:hover { background: var(--hover-bg); color: var(--text); }
+
+.kb-preview__body {
+  overflow: auto;
+  padding: var(--space-sm) var(--space-md) var(--space-md);
+}
+
+.kb-preview__body .kb-statement,
+.kb-preview__body .kb-example,
+.kb-preview__body figure.course-figure { margin: 0; }
+
+.kb-preview__body .kb-example { border: none; padding: 0; }
+.kb-preview__body .kb-example > h3:first-child { font-size: var(--font-size-base); }
+.kb-preview__chapter { font-weight: 600; margin-bottom: var(--space-xs); }
+.kb-preview__body > .kb-preview__content > :last-child { margin-bottom: 0; }
+
+.kb-preview--sheet {
+  left: 0;
+  right: 0;
+  top: auto;
+  bottom: 0;
+  width: 100%;
+  max-height: 70vh;
+  border-radius: 14px 14px 0 0;
+}
+
+/* --- Back / continue pills and status toast --- */
+
+.kb-pill,
+.kb-pill-row {
+  position: fixed;
+  left: 50%;
+  bottom: calc(var(--space-lg) + env(safe-area-inset-bottom, 0px));
+  transform: translateX(-50%);
+  z-index: 350;
+}
+
+.kb-pill-row { display: flex; align-items: center; gap: var(--space-xs); }
+.kb-pill-row .kb-pill { position: static; transform: none; }
+
+.kb-pill,
+.kb-pill__dismiss {
+  min-height: 40px;
+  padding: 6px 16px;
+  font: inherit;
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  box-shadow: 0 6px 20px rgb(28 25 23 / 14%);
+  cursor: pointer;
+  white-space: nowrap;
+  max-width: calc(100vw - 96px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.kb-pill__dismiss { padding: 6px 12px; }
+.kb-pill:hover, .kb-pill__dismiss:hover { border-color: var(--accent); color: var(--accent); }
+.kb-pill[hidden] { display: none; }
+
+.kb-toast {
+  position: fixed;
+  left: 50%;
+  top: calc(var(--nav-height) + var(--space-md));
+  transform: translateX(-50%);
+  z-index: 450;
+  padding: 6px 14px;
+  font-size: var(--font-size-sm);
+  color: var(--bg);
+  background: var(--text);
+  border-radius: 8px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease;
+}
+
+.kb-toast--visible { opacity: 0.92; }
+
+/* The knowledge base's reading bar sits at the bottom on phones. */
+@media (max-width: 768px) {
+  .kb-pill, .kb-pill-row { bottom: calc(76px + env(safe-area-inset-bottom, 0px)); }
+}
+
+/* --- Notes --- */
+
+.kb-note-btn { display: none; }
+
+html.kb-js .kb-noteable { position: relative; }
+
+html.kb-js .kb-note-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  position: absolute;
+  top: 2px;
+  right: -40px;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  color: var(--muted);
+  background: var(--bg);
+  border: 1px solid transparent;
+  border-radius: 6px;
+  cursor: pointer;
+  opacity: 0;
+  font-size: 0;
+}
+
+html.kb-js .kb-note-btn::before { content: "✎"; font-size: 15px; line-height: 1; }
+
+html.kb-js .kb-noteable:hover > .kb-note-btn,
+html.kb-js .kb-note-btn:focus-visible { opacity: 1; border-color: var(--border); }
+html.kb-js .kb-note-btn:hover { color: var(--accent); border-color: var(--accent); }
+
+/* Statements and examples have their own padding: keep the button inside their frame. */
+html.kb-js :is(.kb-statement, .kb-example, figure.course-figure) > .kb-note-btn { right: 4px; top: 4px; }
+
+@media (pointer: coarse), (max-width: 900px) {
+  html.kb-js .kb-note-btn { opacity: 0.55; right: 0; width: 36px; height: 36px; border-color: var(--border-light); }
+  html.kb-js h2.kb-noteable { padding-right: 44px; }
+  html.kb-js li.kb-noteable { padding-right: 40px; }
+}
+
+.kb-note {
+  margin: var(--space-sm) 0 var(--space-md);
+  padding: var(--space-sm) var(--space-md);
+  background: color-mix(in srgb, var(--callout-tip) 7%, var(--bg));
+  border-left: 3px solid var(--callout-tip);
+  border-radius: 0 6px 6px 0;
+  font-size: 0.95rem;
+}
+
+.kb-note__head { display: flex; align-items: center; gap: var(--space-sm); margin-bottom: 2px; }
+
+.kb-note__label,
+.kb-note__edit {
+  padding: 0;
+  font: inherit;
+  font-size: var(--font-size-sm);
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.kb-note__label { font-weight: 600; color: var(--text-secondary); text-align: left; }
+.kb-note__edit { margin-left: auto; color: var(--accent); }
+.kb-note__label:hover, .kb-note__edit:hover { text-decoration: underline; }
+.kb-note__text { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+
+.kb-side-notes { position: relative; }
+
+.kb-side-notes .kb-note {
+  position: absolute;
+  left: 0;
+  right: 0;
+  margin: 0;
+  font-size: var(--font-size-sm);
+}
+
+.kb-note-editor {
+  margin: var(--space-sm) 0 var(--space-md);
+  padding: var(--space-sm);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.kb-note-editor__text {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  padding: var(--space-sm);
+  font: inherit;
+  font-size: 16px;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  resize: vertical;
+}
+
+.kb-note-editor__actions,
+.kb-course-notes__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  margin-top: var(--space-sm);
+}
+
+:is(.kb-note-editor, .kb-course-notes) .kb-button {
+  min-height: 36px;
+  padding: 4px 14px;
+  font: inherit;
+  font-size: var(--font-size-sm);
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+:is(.kb-note-editor, .kb-course-notes) .kb-button:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+:is(.kb-note-editor, .kb-course-notes) .kb-button:disabled { opacity: 0.5; cursor: default; }
+.kb-note-editor__save { font-weight: 600; }
+.kb-note-editor__delete { margin-left: auto; }
+
+@media (pointer: coarse) {
+  :is(.kb-note-editor, .kb-course-notes) .kb-button { min-height: 44px; }
+}
+
+.kb-notes-moved {
+  margin-top: var(--space-2xl);
+  padding-top: var(--space-md);
+  border-top: 1px solid var(--border);
+}
+
+/* --- Course front page: continue reading, progress, notes --- */
+
+.kb-course__continue { margin: calc(-1 * var(--space-md)) 0 var(--space-lg); }
+.kb-course__continue-link { font-weight: 600; }
+.kb-course__continue-link::after { content: " →"; }
+
+.kb-chapter-status { white-space: nowrap; }
+.kb-chapter-status--read { color: var(--callout-tip); font-weight: 600; }
+.kb-chapter-status--started { color: var(--accent); }
+
+.kb-course-notes__group h3 { font-size: var(--font-size-base); margin: var(--space-lg) 0 var(--space-xs); }
+
+.kb-course-notes__item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 var(--space-md);
+  padding: var(--space-sm) 0;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.kb-course-notes__item a { font-weight: 600; }
+.kb-course-notes__item .kb-note__edit { margin-left: auto; }
+.kb-course-notes__item .kb-note__text { flex-basis: 100%; color: var(--text-secondary); }
+
+/* --- Keyboard shortcuts dialog --- */
+
+.kb-shortcuts { width: min(460px, calc(100% - 24px)); }
+.kb-shortcuts__list { display: grid; grid-template-columns: max-content 1fr; gap: var(--space-sm) var(--space-md); margin: 0; padding: var(--space-md) var(--space-lg) var(--space-lg); }
+.kb-shortcuts__list dt { margin: 0; }
+.kb-shortcuts__list dd { margin: 0; color: var(--text-secondary); }
+
+@media (prefers-reduced-motion: reduce) {
+  .kb-toast { transition: none; }
+}
+
 /* --- Print and Export PDF --- */
 
 @media print {
@@ -333,4 +635,6 @@ figure.course-figure {
   .course-figure { break-inside: avoid; }
   figure.course-figure { overflow: visible; }
   .course-figure img { min-width: 0; }
+  .kb-note-btn, .kb-note-editor, .kb-preview, .kb-pill, .kb-pill-row, .kb-toast, .kb-side-notes { display: none !important; }
+  a.kb-ref { text-decoration: none; color: inherit; }
 }
