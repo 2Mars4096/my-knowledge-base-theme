@@ -266,7 +266,7 @@ Optional introductory text appears above the child pages.
 
 ### Course (`course.html`) — textbook front page
 
-Front page for a course published as a section of chapter pages (for example by Learning Assistant's `tools/kb_export`). Shows the course promise (`abstract`), a `designation` badge, `prerequisite_courses` links, and the chapters in `weight` order with each chapter's `abstract`, `examples`, and `exercises` counts; the section's own body follows as "About". Add `series_nav: true` for previous/next chapter links.
+Front page for a course published as a section of chapter pages (for example by Learning Assistant's `tools/kb_export`). Shows the course promise (`abstract`), a `designation` badge, `prerequisite_courses` and `leads_to_courses` links, and the chapters in `weight` order with each chapter's `abstract`, `examples`, `exercises`, `checks`, and `builds_on` (chapter numbers); then a Recall section (counts from each chapter's `statements`), a Maps section that inlines the bundle's `chapter-map.svg` and `course-map.svg` page resources when present, and the reader's notes; the section's own body follows as "About". Add `series_nav: true` for previous/next chapter links.
 
 Chapter pages are ordinary pages styled by `static/css/course.css` and `static/js/course.js`, which a site's head and footer must link:
 
@@ -275,7 +275,9 @@ Chapter pages are ordinary pages styled by `static/css/course.css` and `static/j
 - `figure.course-figure` with a caption, scrolling sideways on phones
 - `a.kb-ref` reference links: hover, focus, or tap shows the target (fetched from another chapter when needed, with mathematics typeset), and a "Back to" control returns to the exact spot
 - reading position per chapter ("Continue at" on return; progress and "Continue reading" on the course page) and notes on any anchored block, both kept in the browser's `localStorage`; the course page lists notes and exports them as Markdown or a JSON backup
-- keyboard shortcuts on chapter pages: `j`/`k` sections, `n`/`p` exercises, `[`/`]` chapters, `h`/`a`/`s` panels, `m` note, `?` help
+- `form.kb-check` answer boxes (hidden until the script runs): the reader types a number, formula, or choice and is told whether it matches the expected values the exporter wrote into the form; solved exercises are remembered and counted on the course page
+- recall mode (button or `r`): numbered definitions, theorems, propositions, lemmas, and corollaries show only their label until revealed, with Knew it / Not yet ratings in five review boxes; the course page runs recall sessions (due cards first, then unseen ones) and marks read chapters on the chapter map
+- keyboard shortcuts on chapter pages: `j`/`k` sections, `n`/`p` exercises, `[`/`]` chapters, `h`/`a`/`s` panels, `m` note, `r` recall mode, `?` help
 
 Link `course.css` and `course.js` with a version query (for example the file's modification time) so readers get updates.
 

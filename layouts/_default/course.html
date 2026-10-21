@@ -25,6 +25,11 @@
                 {{ range $i, $link := . }}{{ if $i }} · {{ end }}{{ $link | markdownify }}{{ end }}
             </span>
             {{ end }}
+            {{ with .Params.leads_to_courses }}
+            <span>Leads to:
+                {{ range $i, $link := . }}{{ if $i }} · {{ end }}{{ $link | markdownify }}{{ end }}
+            </span>
+            {{ end }}
         </div>
         <p class="kb-course__continue" hidden></p>
     </header>
@@ -35,7 +40,7 @@
         <ol class="kb-chapter-list">
             {{ range .Pages.ByWeight }}
             <li>
-                <a href="{{ .RelPermalink }}">
+                <a href="{{ .RelPermalink }}" data-statements="{{ .Params.statements | default 0 }}" data-checks="{{ .Params.checks | default 0 }}">
                     {{ $number := "R" }}
                     {{ with findRESubmatch `^Chapter (\d+)` .Title 1 }}{{ $number = index (index . 0) 1 }}{{ end }}
                     <span class="kb-chapter-list__number" aria-hidden="true">{{ $number }}</span>
@@ -45,12 +50,54 @@
                         {{- with .Params.examples }}{{ . }} worked examples{{ end -}}
                         {{- if and .Params.examples .Params.exercises }} · {{ end -}}
                         {{- with .Params.exercises }}{{ . }} exercises{{ end -}}
+                        {{- with .Params.checks }} · <span class="kb-chapter-list__checks">{{ . }} with an answer check</span>{{ end -}}
                     </span>
+                    {{ with .Params.builds_on }}
+                    <span class="kb-chapter-list__deps">Builds on Chapter{{ if gt (len .) 1 }}s{{ end }} {{ delimit . ", " " and " }}</span>
+                    {{ end }}
                 </a>
             </li>
             {{ end }}
         </ol>
     </section>
+
+    {{/* Filled by course.js; stays hidden without JavaScript or when no chapter has numbered statements. */}}
+    <section class="kb-recall" id="kb-recall" aria-labelledby="kb-recall-title" hidden>
+        <h2 id="kb-recall-title" class="kb-course__section-title">Recall</h2>
+        <p class="kb-course__hint kb-recall__summary"></p>
+        <p class="kb-course__hint">A session shows the name of a definition or result; state it to yourself, then show it and say whether you knew it. Ratings are kept in this browser. On a chapter page, Recall mode (or r) hides every statement in place.</p>
+        <div class="kb-recall__actions">
+            <label>From
+                <select class="kb-recall__scope">
+                    <option value="started">chapters you have started</option>
+                    <option value="all">all chapters</option>
+                </select>
+            </label>
+            <button type="button" class="kb-button kb-recall__start">Start a session</button>
+        </div>
+    </section>
+
+    {{ $chapterMap := .Resources.Get "chapter-map.svg" }}
+    {{ $courseMap := .Resources.Get "course-map.svg" }}
+    {{ if or $chapterMap $courseMap }}
+    <section class="kb-course-maps" aria-labelledby="kb-course-maps-title">
+        <h2 id="kb-course-maps-title" class="kb-course__section-title">Maps</h2>
+        <div class="kb-course-maps__grid">
+            {{ with $chapterMap }}
+            <figure class="kb-map kb-map--chapters">
+                <figcaption>How the chapters build on each other: an arrow runs from a chapter to a later one that cites it.</figcaption>
+                {{ .Content | safeHTML }}
+            </figure>
+            {{ end }}
+            {{ with $courseMap }}
+            <figure class="kb-map kb-map--courses">
+                <figcaption>The courses this one builds on, down to it: an arrow runs from a course to one that builds on it.</figcaption>
+                {{ .Content | safeHTML }}
+            </figure>
+            {{ end }}
+        </div>
+    </section>
+    {{ end }}
 
     {{/* Filled by course.js from this browser's saved notes; stays hidden without JavaScript. */}}
     <section class="kb-course-notes" id="kb-course-notes" aria-labelledby="kb-course-notes-title" hidden>
@@ -58,7 +105,7 @@
         <p class="kb-course-notes__count kb-course__hint"></p>
         <div class="kb-course-notes__actions">
             <button type="button" class="kb-button kb-course-notes__export" data-action="markdown">Export as Markdown</button>
-            <button type="button" class="kb-button kb-course-notes__export" data-action="backup">Back up notes</button>
+            <button type="button" class="kb-button kb-course-notes__export" data-action="backup">Back up notes and ratings</button>
             <button type="button" class="kb-button" data-action="restore">Restore a backup…</button>
             <input type="file" accept="application/json,.json" hidden>
         </div>

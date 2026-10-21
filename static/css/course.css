@@ -560,7 +560,7 @@ html.kb-js :is(.kb-statement, .kb-example, figure.course-figure) > .kb-note-btn 
   margin-top: var(--space-sm);
 }
 
-:is(.kb-note-editor, .kb-course-notes) .kb-button {
+:is(.kb-note-editor, .kb-course-notes, .kb-check, .kb-chapter-tools, .kb-recall-controls, .kb-recall, .kb-recall-session) .kb-button {
   min-height: 36px;
   padding: 4px 14px;
   font: inherit;
@@ -572,13 +572,14 @@ html.kb-js :is(.kb-statement, .kb-example, figure.course-figure) > .kb-note-btn 
   cursor: pointer;
 }
 
-:is(.kb-note-editor, .kb-course-notes) .kb-button:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
-:is(.kb-note-editor, .kb-course-notes) .kb-button:disabled { opacity: 0.5; cursor: default; }
+:is(.kb-note-editor, .kb-course-notes, .kb-check, .kb-chapter-tools, .kb-recall-controls, .kb-recall, .kb-recall-session) .kb-button:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+:is(.kb-note-editor, .kb-course-notes, .kb-check, .kb-chapter-tools, .kb-recall-controls, .kb-recall, .kb-recall-session) .kb-button:disabled { opacity: 0.5; cursor: default; }
+:is(.kb-note-editor, .kb-course-notes, .kb-check, .kb-chapter-tools, .kb-recall-controls, .kb-recall, .kb-recall-session) .kb-button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .kb-note-editor__save { font-weight: 600; }
 .kb-note-editor__delete { margin-left: auto; }
 
 @media (pointer: coarse) {
-  :is(.kb-note-editor, .kb-course-notes) .kb-button { min-height: 44px; }
+  :is(.kb-note-editor, .kb-course-notes, .kb-check, .kb-chapter-tools, .kb-recall-controls, .kb-recall, .kb-recall-session) .kb-button { min-height: 44px; }
 }
 
 .kb-notes-moved {
@@ -612,6 +613,197 @@ html.kb-js :is(.kb-statement, .kb-example, figure.course-figure) > .kb-note-btn 
 .kb-course-notes__item .kb-note__edit { margin-left: auto; }
 .kb-course-notes__item .kb-note__text { flex-basis: 100%; color: var(--text-secondary); }
 
+/* --- Chapter header: what it builds on, tools --- */
+
+.kb-chapter-deps {
+  margin: 0 0 var(--space-sm);
+  color: var(--muted);
+  font-size: var(--font-size-sm);
+}
+
+.kb-chapter-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  margin: 0 0 var(--space-lg);
+}
+
+.kb-chapter-tools__recall[aria-pressed="true"] {
+  border-color: var(--accent) !important;
+  color: var(--accent) !important;
+  font-weight: 600;
+}
+
+/* --- Answer checks --- */
+
+.kb-check {
+  --kb-kind: var(--callout-tip);
+  margin: var(--space-sm) 0;
+  padding: var(--space-sm) var(--space-md);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--kb-kind);
+  border-radius: 0 6px 6px 0;
+  font-size: var(--font-size-sm);
+}
+
+.kb-check[hidden] { display: none; }
+.kb-check__title { margin: 0 0 var(--space-xs); font-weight: 600; color: var(--text-secondary); }
+
+.kb-check__field {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-xs) var(--space-sm);
+  margin: 0 0 var(--space-sm);
+  padding: 0;
+  border: none;
+  min-width: 0;
+}
+
+.kb-check__field > label,
+.kb-check__field > legend { color: var(--text); }
+.kb-check__field > legend { padding: 0; margin-bottom: var(--space-xs); }
+
+.kb-check__field input[type="text"] {
+  flex: 1 1 12rem;
+  max-width: 22rem;
+  min-height: 36px;
+  padding: 4px 10px;
+  font: inherit;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.kb-check__field input[type="text"]:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.kb-check__unit { color: var(--text-secondary); }
+
+.kb-check__field--choice { display: block; }
+.kb-check__option { display: inline-flex; align-items: baseline; gap: 6px; margin: 0 var(--space-md) var(--space-xs) 0; cursor: pointer; }
+.kb-check__field--choice .kb-check__mark { display: block; }
+
+.kb-check__mark { font-weight: 600; }
+.kb-check__field--right .kb-check__mark { color: var(--callout-tip); }
+.kb-check__field--wrong .kb-check__mark { color: var(--callout-warning); }
+.kb-check__field--right input[type="text"] { border-color: var(--callout-tip); }
+.kb-check__field--wrong input[type="text"] { border-color: var(--callout-warning); }
+
+.kb-check__actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-sm); }
+.kb-check__result { color: var(--text-secondary); }
+.kb-check--solved .kb-check__title::after { content: " ✓"; color: var(--callout-tip); }
+
+@media (pointer: coarse) {
+  .kb-check__field input[type="text"] { min-height: 44px; font-size: 16px; }
+  .kb-check__option { min-height: 44px; align-items: center; }
+}
+
+/* --- Recall mode on chapter pages --- */
+
+.kb-recall-controls { display: none; }
+
+.kb-recall-on .kb-recallable .kb-recall-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-sm);
+  margin-top: var(--space-sm);
+}
+
+.kb-recall-on .kb-recallable:not(.kb-recall-shown) .kb-recall-rest,
+.kb-recall-on .kb-recallable:not(.kb-recall-shown) > :not(:first-child):not(.kb-recall-controls):not(.kb-note-btn),
+.kb-recall-on .kb-recall-proof:not(.kb-recall-proof--shown) { display: none; }
+
+.kb-recall-controls [hidden] { display: none; }
+.kb-recall-controls__status { color: var(--muted); font-size: var(--font-size-sm); }
+.kb-recall-controls__knew { font-weight: 600; }
+
+/* --- Recall section and sessions on the course page --- */
+
+.kb-recall__actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-sm) var(--space-md); }
+.kb-recall__actions label { display: inline-flex; flex-wrap: wrap; align-items: center; gap: var(--space-sm); color: var(--text-secondary); font-size: var(--font-size-sm); }
+
+.kb-recall__scope {
+  min-height: 36px;
+  max-width: 100%;
+  padding: 4px 8px;
+  font: inherit;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.kb-recall-session { width: min(720px, calc(100% - 24px)); }
+.kb-recall-session__body { padding: var(--space-md) var(--space-lg) var(--space-lg); max-height: 75vh; overflow: auto; }
+.kb-recall-session__progress { margin: 0; color: var(--muted); font-size: var(--font-size-sm); }
+.kb-recall-session__where { font-size: var(--font-size-sm); }
+.kb-recall-session__prompt { margin: var(--space-md) 0 var(--space-xs); font-size: var(--font-size-lg); font-weight: 600; }
+.kb-recall-session__statement .kb-statement { margin: var(--space-sm) 0; }
+.kb-recall-session__statement mjx-container[display="true"] { overflow-x: auto; overflow-y: hidden; max-width: 100%; }
+.kb-recall-session__actions { display: flex; flex-wrap: wrap; gap: var(--space-sm); margin-top: var(--space-md); }
+.kb-recall-session__actions [hidden] { display: none; }
+.kb-recall-session__knew { font-weight: 600; }
+.kb-recall-session__done { font-size: var(--font-size-lg); font-weight: 600; }
+
+/* --- Chapter and course maps --- */
+
+.kb-chapter-list__deps { grid-column: 2; color: var(--muted); font-size: var(--font-size-sm); }
+.kb-chapter-list__number { grid-row: span 4; }
+
+.kb-course-maps__grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-lg) var(--space-xl);
+  align-items: flex-start;
+}
+
+.kb-map {
+  margin: 0;
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.kb-map figcaption {
+  max-width: 34rem;
+  margin-bottom: var(--space-sm);
+  color: var(--muted);
+  font-size: var(--font-size-sm);
+}
+
+.kb-map__svg { display: block; width: 100%; height: auto; }
+
+.kb-map__node rect { fill: var(--surface); stroke: var(--border); stroke-width: 1; }
+.kb-map__node text { fill: var(--text); font-family: inherit; }
+.kb-map__title { font-size: 13px; }
+.kb-map__node .kb-map__kicker { font-size: 11px; fill: var(--muted); letter-spacing: 0.02em; }
+a.kb-map__node:hover rect,
+a.kb-map__node:focus-visible rect { stroke: var(--accent); stroke-width: 2; }
+a.kb-map__node:focus { outline: none; }
+a.kb-map__node:hover .kb-map__title { fill: var(--accent); }
+
+.kb-map__node--current rect { stroke: var(--accent); stroke-width: 2; fill: color-mix(in srgb, var(--accent) 10%, var(--bg)); }
+.kb-map__node--current .kb-map__title { font-weight: 700; }
+.kb-map__node--absent rect { stroke-dasharray: 4 3; fill: none; }
+.kb-map__node--absent text { fill: var(--muted); }
+.kb-map__node--started rect { stroke: var(--accent); }
+.kb-map__node--read rect { stroke: var(--callout-tip); stroke-width: 2; fill: color-mix(in srgb, var(--callout-tip) 10%, var(--bg)); }
+
+/* The course library as levels (generated learning-assistant section page). */
+.kb-levels { margin: var(--space-md) 0 var(--space-lg); }
+.kb-levels__level { padding: var(--space-sm) 0; border-top: 1px solid var(--border-light); }
+.kb-levels__title { margin: 0 0 var(--space-xs); font-weight: 600; color: var(--muted); font-size: var(--font-size-sm); text-transform: uppercase; letter-spacing: 0.04em; }
+.kb-levels ul { display: flex; flex-wrap: wrap; gap: var(--space-xs) var(--space-lg); list-style: none; margin: 0; padding: 0; }
+.kb-levels li { display: flex; flex-direction: column; margin: 0; }
+.kb-levels li > a { font-weight: 600; }
+.kb-levels__after { color: var(--muted); font-size: var(--font-size-sm); }
+
+.kb-map__edge { fill: none; stroke: var(--muted); stroke-width: 1.4; opacity: 0.7; }
+.kb-map__edge--current { stroke: var(--accent); opacity: 1; }
+.kb-map__arrow { fill: var(--muted); }
+
 /* --- Keyboard shortcuts dialog --- */
 
 .kb-shortcuts { width: min(460px, calc(100% - 24px)); }
@@ -635,6 +827,11 @@ html.kb-js :is(.kb-statement, .kb-example, figure.course-figure) > .kb-note-btn 
   .course-figure { break-inside: avoid; }
   figure.course-figure { overflow: visible; }
   .course-figure img { min-width: 0; }
-  .kb-note-btn, .kb-note-editor, .kb-preview, .kb-pill, .kb-pill-row, .kb-toast, .kb-side-notes { display: none !important; }
+  .kb-note-btn, .kb-note-editor, .kb-preview, .kb-pill, .kb-pill-row, .kb-toast, .kb-side-notes,
+  .kb-check, .kb-chapter-tools, .kb-recall-controls, .kb-recall, .kb-course-maps { display: none !important; }
+  /* Recall mode never hides anything on paper. */
+  .kb-recall-on .kb-recallable .kb-recall-rest { display: inline !important; }
+  .kb-recall-on .kb-recallable > :not(.kb-recall-controls):not(.kb-note-btn),
+  .kb-recall-on .kb-recall-proof { display: block !important; }
   a.kb-ref { text-decoration: none; color: inherit; }
 }
