@@ -1,0 +1,59 @@
+{{/* Course front page for textbooks exported by learning-assistant's tools/kb_export.
+     Chapters are the section's pages in weight order; the page body is "About This Course". */}}
+{{ define "main" }}
+
+<div class="breadcrumbs" style="padding: var(--space-sm) var(--space-lg) 0;">
+    <a href="/">Home</a>
+    {{ range .Ancestors.Reverse }}
+        {{ if not .IsHome }}
+        <span>&rsaquo;</span>
+        <a href="{{ .RelPermalink }}">{{ .Title }}</a>
+        {{ end }}
+    {{ end }}
+    <span>&rsaquo;</span> {{ .Title }}
+</div>
+
+{{ partial "page-nav.html" . }}
+
+<div class="kb-course">
+    <header class="kb-course__header">
+        {{ with .Params.abstract }}<p class="kb-course__promise">{{ . }}</p>{{ end }}
+        <div class="kb-course__facts">
+            {{ with .Params.designation }}<span class="kb-course__badge">{{ . }}</span>{{ end }}
+            {{ with .Params.prerequisite_courses }}
+            <span>Builds on:
+                {{ range $i, $link := . }}{{ if $i }} · {{ end }}{{ $link | markdownify }}{{ end }}
+            </span>
+            {{ end }}
+        </div>
+    </header>
+
+    <section aria-labelledby="kb-course-chapters">
+        <h2 id="kb-course-chapters" class="kb-course__section-title">Chapters</h2>
+        <p class="kb-course__hint">Each chapter is its own page. Under an exercise, open Hint, Answer, or Solution once you have tried it.</p>
+        <ol class="kb-chapter-list">
+            {{ range .Pages.ByWeight }}
+            <li>
+                <a href="{{ .RelPermalink }}">
+                    {{ $number := "R" }}
+                    {{ with findRESubmatch `^Chapter (\d+)` .Title 1 }}{{ $number = index (index . 0) 1 }}{{ end }}
+                    <span class="kb-chapter-list__number" aria-hidden="true">{{ $number }}</span>
+                    <span class="kb-chapter-list__title">{{ replaceRE `^Chapter \d+: ` "" .Title }}</span>
+                    {{ with .Params.abstract }}<span class="kb-chapter-list__abstract">{{ . }}</span>{{ end }}
+                    <span class="kb-chapter-list__meta">
+                        {{- with .Params.examples }}{{ . }} worked examples{{ end -}}
+                        {{- if and .Params.examples .Params.exercises }} · {{ end -}}
+                        {{- with .Params.exercises }}{{ . }} exercises{{ end -}}
+                    </span>
+                </a>
+            </li>
+            {{ end }}
+        </ol>
+    </section>
+
+    <article class="kb-course__about content-area" id="main-content">
+        {{ .Content }}
+    </article>
+</div>
+
+{{ end }}

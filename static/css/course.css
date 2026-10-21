@@ -1,0 +1,336 @@
+/* ============================================================
+   Course textbooks
+   Pages exported by learning-assistant's tools/kb_export: statement
+   blocks, worked examples, exercises with solution panels, figures,
+   and the course front page (layouts/_default/course.html).
+   Uses the design tokens from styles.css only.
+   ============================================================ */
+
+.kb-statement,
+.kb-example,
+.kb-exercise-anchor {
+  scroll-margin-top: calc(var(--nav-height) + var(--space-md));
+}
+
+/* --- Statement blocks: definitions, theorems, proofs, ... --- */
+
+.kb-statement {
+  --kb-kind: var(--border);
+  margin: var(--space-lg) 0;
+  padding: var(--space-md) var(--space-lg);
+  background: var(--surface);
+  border-left: 3px solid var(--kb-kind);
+  border-radius: 0 6px 6px 0;
+}
+
+.kb-statement > :first-child { margin-top: 0; }
+.kb-statement > :last-child { margin-bottom: 0; }
+.kb-statement > p:first-child > strong:first-child { color: var(--kb-kind); }
+
+.kb-statement--definition { --kb-kind: var(--notes); }
+.kb-statement--theorem,
+.kb-statement--proposition,
+.kb-statement--lemma,
+.kb-statement--corollary { --kb-kind: var(--accent); }
+.kb-statement--assumptions { --kb-kind: var(--muted); }
+
+.kb-statement--common-mistake {
+  --kb-kind: var(--callout-warning);
+  background: color-mix(in srgb, var(--callout-warning) 7%, var(--bg));
+}
+
+.kb-statement--proof {
+  background: none;
+  border-left: 2px solid var(--border);
+  padding-top: var(--space-xs);
+  padding-bottom: var(--space-xs);
+}
+
+.kb-statement--proof > p:first-child > strong:first-child {
+  color: var(--text);
+  font-style: italic;
+}
+
+.kb-statement--proof::after {
+  content: "∎";
+  display: block;
+  text-align: right;
+  color: var(--muted);
+  line-height: 1;
+}
+
+/* Long displayed formulas scroll inside the block instead of overflowing the page. */
+:is(.kb-statement, .kb-example, .kb-panel) mjx-container[display="true"] {
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+/* MathJax 3 cannot break inline formulas, so on a phone a long one scrolls sideways
+   instead of widening the page. Scoped to course pages. */
+@media (max-width: 600px) {
+  .content-area:has(.kb-statement, .kb-exercise-anchor) mjx-container:not([display="true"]) {
+    display: inline-block;
+    max-width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    vertical-align: middle;
+  }
+}
+
+/* --- Worked examples --- */
+
+.kb-example {
+  margin: var(--space-xl) 0;
+  padding: var(--space-md) var(--space-lg) var(--space-xs);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.kb-example > h3:first-child {
+  margin-top: 0;
+  font-size: var(--font-size-lg);
+}
+
+.kb-example .kb-statement:not(.kb-statement--common-mistake, .kb-statement--proof) { background: var(--bg); }
+
+/* --- Exercises --- */
+
+ol:has(> li .kb-exercise-anchor) { padding-left: 2.25em; }
+
+ol:has(> li .kb-exercise-anchor) > li {
+  margin-bottom: var(--space-md);
+  padding-bottom: var(--space-sm);
+  border-bottom: 1px solid var(--border-light);
+}
+
+ol:has(> li .kb-exercise-anchor) > li::marker {
+  font-weight: 700;
+  color: var(--muted);
+}
+
+li:has(> p > .kb-exercise-anchor:target),
+li:has(> .kb-exercise-anchor:target) {
+  background: color-mix(in srgb, var(--accent) 6%, var(--bg));
+  box-shadow: -0.75em 0 0 color-mix(in srgb, var(--accent) 6%, var(--bg));
+  border-radius: 4px;
+}
+
+/* --- Hint, answer, and solution panels --- */
+
+.kb-panel {
+  --kb-kind: var(--accent);
+  margin: var(--space-xs) var(--space-sm) var(--space-xs) 0;
+}
+
+.kb-panel--hint { --kb-kind: var(--callout-tip); }
+.kb-panel--answer { --kb-kind: var(--notes); }
+.kb-panel--solution { --kb-kind: var(--callout-example); }
+
+/* Closed panels for one exercise sit in a row; an open one takes the full width. */
+.kb-panel:not([open]) { display: inline-block; }
+
+.kb-panel > summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5em;
+  min-height: 32px;
+  padding: 2px 12px;
+  list-style: none;
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--text-secondary);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  user-select: none;
+}
+
+.kb-panel > summary::-webkit-details-marker { display: none; }
+
+.kb-panel > summary::before {
+  content: "";
+  width: 0.4em;
+  height: 0.4em;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(-45deg);
+  transition: transform 0.15s ease;
+}
+
+.kb-panel > summary:hover,
+.kb-panel[open] > summary {
+  color: var(--kb-kind);
+  border-color: var(--kb-kind);
+}
+
+.kb-panel > summary:focus-visible {
+  outline: 2px solid var(--kb-kind);
+  outline-offset: 2px;
+}
+
+.kb-panel[open] {
+  display: block;
+  margin: var(--space-sm) 0 var(--space-md);
+  padding: var(--space-sm) var(--space-md);
+  background: var(--surface);
+  border-left: 3px solid var(--kb-kind);
+  border-radius: 0 6px 6px 0;
+}
+
+.kb-panel[open] > summary {
+  margin-bottom: var(--space-sm);
+  background: var(--surface);
+}
+
+.kb-panel[open] > summary::before { transform: rotate(45deg); }
+.kb-panel > :last-child { margin-bottom: 0; }
+
+@media (pointer: coarse) {
+  .kb-panel > summary { min-height: 44px; padding: 4px 16px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kb-panel > summary::before { transition: none; }
+}
+
+/* --- Figures --- */
+
+figure.course-figure {
+  margin: var(--space-xl) 0;
+  text-align: left;
+}
+
+.course-figure img {
+  width: 100%;
+  max-width: 760px;
+  margin: 0 auto;
+  border: 1px solid var(--border-light);
+  border-radius: 6px;
+}
+
+.course-figure figcaption {
+  max-width: 760px;
+  margin: var(--space-sm) auto 0;
+  font-style: normal;
+  text-align: left;
+  color: var(--text-secondary);
+  line-height: 1.55;
+}
+
+.course-figure figcaption strong { color: var(--text); }
+
+/* On a phone, keep labels readable: the figure scrolls sideways instead of shrinking. */
+@media (max-width: 600px) {
+  figure.course-figure { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .course-figure img { min-width: 520px; }
+  .course-figure figcaption { position: sticky; left: 0; max-width: calc(100vw - 2 * var(--space-lg)); }
+}
+
+/* --- Course front page --- */
+
+.kb-course .kb-course-fallback { display: none; }
+
+.kb-course {
+  max-width: var(--max-content);
+  margin: 0 auto;
+  padding: 0 var(--space-lg) var(--space-2xl);
+}
+
+.kb-course__promise {
+  font-size: var(--font-size-lg);
+  color: var(--text-secondary);
+  margin: 0 0 var(--space-md);
+}
+
+.kb-course__facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm) var(--space-md);
+  align-items: center;
+  margin-bottom: var(--space-xl);
+  font-size: var(--font-size-sm);
+  color: var(--muted);
+}
+
+.kb-course__badge {
+  padding: 2px 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text-secondary);
+}
+
+.kb-course__section-title {
+  font-size: var(--font-size-xl);
+  margin: var(--space-xl) 0 var(--space-sm);
+}
+
+.kb-course__hint {
+  color: var(--muted);
+  font-size: var(--font-size-sm);
+  margin-bottom: var(--space-md);
+}
+
+.kb-chapter-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  counter-reset: none;
+}
+
+.kb-chapter-list a {
+  display: grid;
+  grid-template-columns: 2.5rem 1fr;
+  column-gap: var(--space-md);
+  padding: var(--space-md);
+  border-bottom: 1px solid var(--border-light);
+  color: var(--text);
+  text-decoration: none;
+  border-radius: 6px;
+}
+
+.kb-chapter-list a:hover { background: var(--hover-bg); }
+.kb-chapter-list a:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+.kb-chapter-list__number {
+  grid-row: span 3;
+  font-size: var(--font-size-xl);
+  font-weight: 700;
+  color: var(--muted);
+  line-height: 1.2;
+}
+
+.kb-chapter-list__title { font-weight: 600; }
+
+.kb-chapter-list__abstract {
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+}
+
+.kb-chapter-list__meta {
+  color: var(--muted);
+  font-size: var(--font-size-sm);
+}
+
+.kb-course__about { margin-top: var(--space-xl); }
+
+@media (max-width: 600px) {
+  .kb-course { padding: 0 var(--space-md) var(--space-xl); }
+  .kb-chapter-list a { grid-template-columns: 2rem 1fr; padding: var(--space-md) var(--space-sm); }
+}
+
+/* --- Print and Export PDF --- */
+
+@media print {
+  .kb-panel,
+  .kb-panel[open] { display: block; }
+  .kb-panel > summary { border: none; padding: 0; min-height: 0; background: none; }
+  .kb-panel > summary::before { display: none; }
+  .kb-statement,
+  .kb-example,
+  .course-figure { break-inside: avoid; }
+  figure.course-figure { overflow: visible; }
+  .course-figure img { min-width: 0; }
+}

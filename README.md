@@ -264,6 +264,16 @@ layout: "stacked"
 Optional introductory text appears above the child pages.
 ```
 
+### Course (`course.html`) — textbook front page
+
+Front page for a course published as a section of chapter pages (for example by Learning Assistant's `tools/kb_export`). Shows the course promise (`abstract`), a `designation` badge, `prerequisite_courses` links, and the chapters in `weight` order with each chapter's `abstract`, `examples`, and `exercises` counts; the section's own body follows as "About". Add `series_nav: true` for previous/next chapter links.
+
+Chapter pages are ordinary pages styled by `static/css/course.css` and `static/js/course.js`, which a site's head and footer must link:
+
+- `.kb-statement--<kind>` blocks (definition, theorem, proposition, lemma, corollary, proof, common-mistake, assumptions) and `.kb-example` sections
+- exercises anchored with `.kb-exercise-anchor`, each followed by collapsed `details.kb-panel--hint|answer|solution` panels, opened automatically for printing
+- `figure.course-figure` with a caption, scrolling sideways on phones
+
 ### Papers List (`papers/list.html`) — specialized for papers
 
 Enhanced list view with:
